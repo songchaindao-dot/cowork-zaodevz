@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import { relativeTime } from "@/lib/types";
 import type { ActionItem } from "@/lib/types";
 
-type NotifType = "assigned" | "approval_needed" | "open_task" | "claimed";
+type NotifType =
+  | "assigned"
+  | "approval_needed"
+  | "open_task"
+  | "claimed"
+  | "review_approved"
+  | "review_rejected"
+  | "review_changes";
 
 interface Notification {
   id: string;
@@ -15,10 +22,17 @@ interface Notification {
   createdAt: string;
 }
 
+interface MyPendingUpdate {
+  updateId: string;
+  itemId: string;
+  reviewStatus: string;
+}
+
 interface Snapshot {
   assignedIds: string[];
   openIds: string[];
   pendingUpdateIds: string[];
+  myPendingUpdates: MyPendingUpdate[];
 }
 
 const TYPE_DOT: Record<NotifType, string> = {
@@ -26,6 +40,9 @@ const TYPE_DOT: Record<NotifType, string> = {
   approval_needed: "bg-amber-400",
   open_task: "bg-emerald-400",
   claimed: "bg-purple-400",
+  review_approved: "bg-emerald-400",
+  review_rejected: "bg-red-400",
+  review_changes: "bg-orange-400",
 };
 
 function genId(): string {
@@ -49,7 +66,6 @@ export function NotificationBell({
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<Notification[]>([]);
 
-  // Load persisted notifications on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
     const raw = window.localStorage.getItem(notifsKey);
@@ -58,7 +74,6 @@ export function NotificationBell({
     }
   }, [notifsKey]);
 
-  // Diff items against snapshot and generate new notifications
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -68,7 +83,7 @@ export function NotificationBell({
       try { snap = JSON.parse(snapRaw); } catch {}
     }
 
-    // Compute current state
+    // ── Compute current state ──────────────────────────────────────
     const assignedIds = items
       .filter((it) => it.status !== "DONE" && String(it.owner).toLowerCase() === userKey)
       .map((it) => it.id);
@@ -77,6 +92,7 @@ export function NotificationBell({
       .filter((it) => it.status !== "DONE" && (it.claimable || String(it.owner).toLowerCase() === "open"))
       .map((it) => it.id);
 
+    // Pending reviews (for leads — updates submitted by anyone)
     const pendingUpdateIds: string[] = [];
     if (isLeadUser) {
       for (const it of items) {
@@ -86,11 +102,20 @@ export function NotificationBell({
       }
     }
 
-    // Persist updated snapshot
-    window.localStorage.setItem(snapKey, JSON.stringify({ assignedIds, openIds, pendingUpdateIds }));
+    // Updates submitted by ME (to detect when leads review them)
+    const myPendingUpdates: MyPendingUpdate[] = items.flatMap((it) =>
+      (it.updates || [])
+        .filter((u) => u.submittedBy === userKey)
+        .map((u) => ({ updateId: u.id, itemId: it.id, reviewStatus: u.reviewStatus }))
+    );
 
-    // No previous snapshot = first ever visit, initialize only
-    if (!snap) return;
+    // ── Persist snapshot ───────────────────────────────────────────
+    window.localStorage.setItem(
+      snapKey,
+      JSON.stringify({ assignedIds, openIds, pendingUpdateIds, myPendingUpdates }),
+    );
+
+    if (!snap) return; // First visit — initialize only, no notifications
 
     const now = new Date().toISOString();
     const newNotifs: Notification[] = [];
@@ -100,7 +125,7 @@ export function NotificationBell({
     const prevPending = new Set(snap.pendingUpdateIds);
     const curOpenSet = new Set(openIds);
 
-    // Tasks newly assigned to me
+    // ── Tasks newly assigned to me ─────────────────────────────────
     for (const id of assignedIds) {
       if (!prevAssigned.has(id)) {
         const it = items.find((x) => x.id === id);
@@ -114,7 +139,7 @@ export function NotificationBell({
       }
     }
 
-    // New open/claimable tasks
+    // ── New open / claimable tasks ─────────────────────────────────
     for (const id of openIds) {
       if (!prevOpen.has(id)) {
         const it = items.find((x) => x.id === id);
@@ -128,7 +153,7 @@ export function NotificationBell({
       }
     }
 
-    // Tasks that were open and got claimed
+    // ── Tasks that were open and got claimed ───────────────────────
     for (const id of snap.openIds) {
       if (!curOpenSet.has(id)) {
         const it = items.find((x) => x.id === id);
@@ -142,22 +167,59 @@ export function NotificationBell({
       }
     }
 
-    // New pending reviews (leads only)
+    // ── New pending reviews — LEADS ONLY ──────────────────────────
     if (isLeadUser) {
       for (const uid of pendingUpdateIds) {
         if (!prevPending.has(uid)) {
           for (const it of items) {
             const u = (it.updates || []).find((x) => x.id === uid);
             if (u) {
+              const markedDone = u.toStatus === "DONE";
               newNotifs.push({
                 id: genId(), type: "approval_needed", itemId: it.id,
-                message: `${u.displayName} submitted for review: ${it.title}`,
+                message: markedDone
+                  ? `${u.displayName} marked as done — needs review: ${it.title}`
+                  : `${u.displayName} submitted update for review: ${it.title}`,
                 read: false, createdAt: now,
               });
               break;
             }
           }
         }
+      }
+    }
+
+    // ── Review decisions — notify the submitter ────────────────────
+    // When one of MY previously-pending updates gets approved/rejected/changes
+    for (const prev of snap.myPendingUpdates || []) {
+      if (prev.reviewStatus !== "pending") continue; // Already had a decision last time
+      const it = items.find((x) => x.id === prev.itemId);
+      if (!it) continue;
+      const u = (it.updates || []).find((x) => x.id === prev.updateId);
+      if (!u || u.reviewStatus === "pending") continue; // Still pending or gone
+
+      let type: NotifType = "review_approved";
+      let message = "";
+
+      if (u.reviewStatus === "approved") {
+        type = "review_approved";
+        message = u.toStatus === "DONE"
+          ? `Task marked complete: ${it.title}`
+          : `Your update was approved: ${it.title}`;
+      } else if (u.reviewStatus === "rejected") {
+        type = "review_rejected";
+        message = u.reviewNotes
+          ? `Update rejected: ${it.title} — "${u.reviewNotes}"`
+          : `Update rejected: ${it.title}`;
+      } else if (u.reviewStatus === "changes_requested") {
+        type = "review_changes";
+        message = u.reviewNotes
+          ? `Changes requested: ${it.title} — "${u.reviewNotes}"`
+          : `Changes requested on: ${it.title}`;
+      }
+
+      if (message) {
+        newNotifs.push({ id: genId(), type, itemId: prev.itemId, message, read: false, createdAt: now });
       }
     }
 
@@ -229,7 +291,7 @@ export function NotificationBell({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto rounded-2xl bg-[#0d1f35] border border-white/10 shadow-2xl">
+          <div className="absolute right-0 top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[28rem] overflow-y-auto rounded-2xl bg-[#0d1f35] border border-white/10 shadow-2xl">
             <div className="sticky top-0 bg-[#0d1f35] border-b border-white/10 px-4 py-3 flex items-center justify-between">
               <span className="text-sm font-semibold">
                 Notifications
@@ -241,18 +303,12 @@ export function NotificationBell({
               </span>
               <div className="flex gap-3">
                 {unread > 0 && (
-                  <button
-                    onClick={markAllRead}
-                    className="text-[11px] text-white/50 hover:text-white/80 transition"
-                  >
+                  <button onClick={markAllRead} className="text-[11px] text-white/50 hover:text-white/80 transition">
                     Mark read
                   </button>
                 )}
                 {notifs.length > 0 && (
-                  <button
-                    onClick={clearAll}
-                    className="text-[11px] text-white/50 hover:text-white/80 transition"
-                  >
+                  <button onClick={clearAll} className="text-[11px] text-white/50 hover:text-white/80 transition">
                     Clear all
                   </button>
                 )}
@@ -264,7 +320,7 @@ export function NotificationBell({
                 <div className="text-2xl mb-2">🔔</div>
                 <p className="text-sm text-white/40">No notifications yet</p>
                 <p className="text-[11px] text-white/25 mt-1">
-                  You&apos;ll see task assignments, open tasks, and review requests here.
+                  You&apos;ll see assignments, reviews, and task updates here.
                 </p>
               </div>
             ) : (
@@ -279,15 +335,9 @@ export function NotificationBell({
                           : "hover:bg-white/[0.06]"
                       }`}
                     >
-                      <span
-                        className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${TYPE_DOT[n.type]}`}
-                      />
+                      <span className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${TYPE_DOT[n.type]}`} />
                       <div className="flex-1 min-w-0 text-left">
-                        <p
-                          className={`text-sm leading-snug ${
-                            n.read ? "text-white/60" : "text-white/90"
-                          }`}
-                        >
+                        <p className={`text-sm leading-snug ${n.read ? "text-white/60" : "text-white/90"}`}>
                           {n.message}
                         </p>
                         <p className="mt-0.5 text-[11px] text-white/35">

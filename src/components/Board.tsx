@@ -81,6 +81,7 @@ type Filters = {
   phase: string;
   mineOnly: boolean;
   agingOnly: boolean;
+  reviewsOnly: boolean;
 };
 
 const EMPTY_FILTERS: Filters = {
@@ -91,6 +92,7 @@ const EMPTY_FILTERS: Filters = {
   phase: "",
   mineOnly: true,
   agingOnly: false,
+  reviewsOnly: false,
 };
 
 function parseDueDate(raw: string): Date | null {
@@ -274,6 +276,10 @@ export function Board({
       } else if (filters.agingOnly && it.status === "DONE") {
         return false;
       }
+      if (filters.reviewsOnly) {
+        const hasPending = (it.updates || []).some((u) => u.reviewStatus === "pending");
+        if (!hasPending) return false;
+      }
       return true;
     });
   }, [items, filters, currentUser]);
@@ -308,7 +314,8 @@ export function Board({
     filters.priority ||
     filters.phase ||
     filters.mineOnly ||
-    filters.agingOnly;
+    filters.agingOnly ||
+    filters.reviewsOnly;
 
   return (
     <div className="space-y-4">
@@ -461,6 +468,10 @@ function FilterBar({
 }) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
   const me = currentUser.charAt(0).toUpperCase() + currentUser.slice(1);
+  const reviewCount = items.reduce(
+    (n, it) => n + (it.updates || []).filter((u) => u.reviewStatus === "pending").length,
+    0,
+  );
   return (
     <div className="space-y-2 rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/10 p-3">
       <div className="flex gap-2">
@@ -492,6 +503,14 @@ function FilterBar({
           label="Aging > 14d"
           tone="red"
         />
+        {isLeadUser && (
+          <Pill
+            active={filters.reviewsOnly}
+            onClick={() => set({ reviewsOnly: !filters.reviewsOnly })}
+            label={reviewCount > 0 ? `Reviews (${reviewCount})` : "Reviews"}
+            tone="amber"
+          />
+        )}
         <Divider />
         <SelectPill
           value={filters.owner}
@@ -531,13 +550,16 @@ function Pill({
   active: boolean;
   onClick: () => void;
   label: string;
-  tone?: "red";
+  tone?: "red" | "amber";
 }) {
   const base = "px-3 py-1 rounded-full text-xs border transition whitespace-nowrap";
   const off = "border-white/10 text-white/60 hover:text-white hover:bg-white/5";
   const onBlue = "border-zao-accent/60 bg-zao-accent/15 text-blue-200";
   const onRed = "border-red-500/60 bg-red-500/15 text-red-200";
-  const cls = active ? (tone === "red" ? onRed : onBlue) : off;
+  const onAmber = "border-amber-500/60 bg-amber-500/15 text-amber-200";
+  const cls = active
+    ? tone === "red" ? onRed : tone === "amber" ? onAmber : onBlue
+    : off;
   return (
     <button onClick={onClick} className={`${base} ${cls}`}>
       {label}
