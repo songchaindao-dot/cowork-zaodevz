@@ -18,6 +18,7 @@ import {
 import { quickCreate, patchField, claimTask } from "@/app/actions";
 import { TaskRoom } from "./TaskRoom";
 import { TodoPanel, TodoTrigger } from "./TodoPanel";
+import { NotificationBell } from "./NotificationBell";
 
 const STATUS_LABEL: Record<ActionStatus, string> = {
   TODO: "TO DO",
@@ -44,6 +45,7 @@ const OWNER_BADGE: Record<string, string> = {
   Iman: "bg-purple-500/20 text-purple-300 border-purple-500/40",
   ThyRev: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
   Both: "bg-slate-500/20 text-slate-200 border-slate-500/40",
+  Open: "bg-amber-500/20 text-amber-300 border-amber-500/40",
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
@@ -66,6 +68,7 @@ const CATEGORY_COLOR: Record<string, string> = {
 function ownerInitial(o: string): string {
   if (!o) return "?";
   if (o === "Both") return "Z+I";
+  if (o === "Open") return "?";
   if (o === "ThyRev") return "TR";
   return o.slice(0, 1).toUpperCase();
 }
@@ -350,6 +353,8 @@ export function Board({
         currentUser={currentUser}
         onHelp={() => setHelpOpen(true)}
         portalCategories={portalCategories}
+        items={items}
+        isLeadUser={!isWorker}
       />
 
       {filtersActive && (
@@ -439,12 +444,16 @@ function FilterBar({
   currentUser,
   onHelp,
   portalCategories,
+  items,
+  isLeadUser,
 }: {
   filters: Filters;
   onChange: (f: Filters) => void;
   currentUser: string;
   onHelp: () => void;
   portalCategories: string[];
+  items: ActionItem[];
+  isLeadUser: boolean;
 }) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
   const me = currentUser.charAt(0).toUpperCase() + currentUser.slice(1);
@@ -457,6 +466,7 @@ function FilterBar({
           placeholder="Search title, notes, owner..."
           className="flex-1 rounded-xl bg-[#0b1220] border border-white/10 px-3 py-2 text-sm placeholder-white/30 focus:outline-none focus:border-zao-accent text-white"
         />
+        <NotificationBell items={items} currentUser={currentUser} isLeadUser={isLeadUser} />
         <button
           onClick={onHelp}
           className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70 hover:bg-white/5"
@@ -639,7 +649,7 @@ function QuickAddForm({
     if (me === "zaal") return "Zaal";
     if (me === "iman") return "Iman";
     if (me === "thyrev") return "ThyRev";
-    return "Both";
+    return "Open";
   })();
   const [important, setImportant] = useState(false);
   const [urgent, setUrgent] = useState(false);
@@ -797,7 +807,7 @@ function Card({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {item.claimable ? (
+        {(item.claimable || ownerStr.toLowerCase() === "open") ? (
           <span className="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider border border-amber-500/50 bg-amber-500/15 text-amber-300 font-bold">
             CLAIM
           </span>
@@ -871,7 +881,7 @@ function Card({
           open
         </button>
         {/* Indicators */}
-        {item.claimable && (
+        {(item.claimable || ownerStr.toLowerCase() === "open") && (
           <button
             onClick={handleClaim}
             disabled={pending}

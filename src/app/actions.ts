@@ -70,11 +70,12 @@ function readForm(form: FormData, id: string, actor: string, prev?: ActionItem):
   const now = new Date().toISOString();
   const taskTypeRaw = form.get("taskType");
   const hasApprovalField = form.get("_hasRequiresApproval") === "1";
+  const ownerVal = String(form.get("owner") ?? prev?.owner ?? "Open").trim();
   const next = normalizeItem({
     id,
     title: String(form.get("title") ?? prev?.title ?? "").trim(),
     createdBy: prev?.createdBy || actor,
-    owner: String(form.get("owner") ?? prev?.owner ?? "Both").trim(),
+    owner: ownerVal,
     status: asStatus(form.get("status") ?? prev?.status),
     category: asCategory(form.get("category") ?? prev?.category),
     priority: asPriority(form.get("priority") ?? prev?.priority),
@@ -97,6 +98,8 @@ function readForm(form: FormData, id: string, actor: string, prev?: ActionItem):
     comments: prev?.comments,
     updates: prev?.updates,
     activity: prev?.activity,
+    // Auto-claimable: Open owner means anyone can claim it
+    claimable: ownerVal === "Open",
   });
   if (prev) {
     if (prev.status !== "DONE" && next.status === "DONE") {
@@ -183,7 +186,8 @@ export async function patchField(form: FormData): Promise<void> {
       next.title = value.trim();
       break;
     case "owner":
-      next.owner = value.trim() || "Both";
+      next.owner = value.trim() || "Open";
+      next.claimable = next.owner === "Open";
       break;
     case "status": {
       const prevStatus = cur.status;
@@ -421,7 +425,7 @@ export async function todoProcess(
   for (const action of todoActions) {
     if (action.type === "create") {
       const id = newId(doc.items);
-      const ownerVal = action.owner ?? "Both";
+      const ownerVal = action.owner ?? "Open";
       const item = normalizeItem({
         id,
         title: action.title,
