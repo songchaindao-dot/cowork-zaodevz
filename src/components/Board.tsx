@@ -269,7 +269,8 @@ export function Board({
         const mine = currentUser.toLowerCase();
         const o = String(it.owner).toLowerCase();
         const isOpenTask = it.claimable || o === "open";
-        if (o !== mine && o !== "both" && !isOpenTask) return false;
+        const iCreated = String(it.createdBy || "").toLowerCase() === mine;
+        if (o !== mine && o !== "both" && !isOpenTask && !iCreated) return false;
       }
       if (filters.agingOnly && it.status !== "DONE") {
         if (ageDays(it.createdAt) <= 14) return false;

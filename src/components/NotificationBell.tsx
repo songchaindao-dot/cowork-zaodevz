@@ -291,8 +291,8 @@ export function NotificationBell({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[28rem] overflow-y-auto rounded-2xl bg-[#0d1f35] border border-white/10 shadow-2xl">
-            <div className="sticky top-0 bg-[#0d1f35] border-b border-white/10 px-4 py-3 flex items-center justify-between">
+          <div className="absolute right-0 top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[28rem] overflow-y-auto rounded-2xl border border-white/[0.12] shadow-2xl" style={{ backgroundColor: "#07111e" }}>
+            <div className="sticky top-0 border-b border-white/10 px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "#07111e" }}>
               <span className="text-sm font-semibold">
                 Notifications
                 {unread > 0 && (
@@ -330,17 +330,23 @@ export function NotificationBell({
                     <button
                       onClick={() => handleNotifClick(n)}
                       className={`w-full text-left px-4 py-3 flex items-start gap-3 transition ${
-                        n.read
-                          ? "opacity-50 hover:opacity-80 hover:bg-white/[0.02]"
-                          : "hover:bg-white/[0.06]"
+                        n.read ? "hover:bg-white/[0.03]" : "hover:bg-white/[0.07]"
                       }`}
                     >
-                      <span className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${TYPE_DOT[n.type]}`} />
+                      <span
+                        className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${TYPE_DOT[n.type]} ${
+                          n.read ? "opacity-40" : ""
+                        }`}
+                      />
                       <div className="flex-1 min-w-0 text-left">
-                        <p className={`text-sm leading-snug ${n.read ? "text-white/60" : "text-white/90"}`}>
+                        <p
+                          className={`text-sm leading-snug ${
+                            n.read ? "text-white/35" : "text-white/90"
+                          }`}
+                        >
                           {n.message}
                         </p>
-                        <p className="mt-0.5 text-[11px] text-white/35">
+                        <p className={`mt-0.5 text-[11px] ${n.read ? "text-white/20" : "text-white/35"}`}>
                           {relativeTime(n.createdAt)} · tap to open task
                         </p>
                       </div>
