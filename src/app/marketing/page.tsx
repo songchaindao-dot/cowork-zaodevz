@@ -4,6 +4,7 @@ import { getActions, ageDays } from "@/lib/data";
 import { logout } from "@/app/actions";
 import { Board } from "@/components/Board";
 import { NavBar } from "@/components/NavBar";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { MARKETING_CATEGORIES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export default async function MarketingPage() {
     return Date.now() - d < 7 * 24 * 60 * 60 * 1000;
   }).length;
 
-  const userLabel = user === "zaal" ? "Zaal" : "Iman";
+  const userLabel = user === "zaal" ? "Zaal" : user === "iman" ? "Iman" : "ThyRev";
 
   return (
     <main className="min-h-screen relative text-white px-4 bg-[#150a00] overflow-hidden">
@@ -47,6 +48,7 @@ export default async function MarketingPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <PWAInstallButton />
               <UserBadge name={userLabel} />
               <form action={logout}>
                 <button className="text-xs rounded-lg border border-white/10 px-2.5 py-1.5 hover:bg-white/5 text-white/70">

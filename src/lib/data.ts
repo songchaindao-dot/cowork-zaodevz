@@ -1,6 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { ActionDoc, ActionItem, ActionStatus, Phase, Priority } from "./types";
+import type {
+  ActionDoc,
+  ActionItem,
+  ActionStatus,
+  Phase,
+  Priority,
+  TaskType,
+} from "./types";
 
 export type {
   ActionStatus,
@@ -10,16 +17,25 @@ export type {
   Owner,
   ActionItem,
   ActionDoc,
+  TaskType,
+  ReviewStatus,
+  Comment,
+  TaskUpdate,
+  ActivityEvent,
 } from "./types";
+
 export {
   STATUSES,
   PRIORITIES,
   PHASES,
   CATEGORIES,
   OWNERS,
+  TASK_TYPES,
+  TASK_TYPE_LABELS,
   ageDays,
   cycleDays,
   isAging,
+  relativeTime,
 } from "./types";
 
 const LOCAL_PATH = path.join(process.cwd(), "data", "actions.json");
@@ -40,7 +56,7 @@ export function normalizeItem(
   raw: Partial<ActionItem> & { id: string; title: string },
 ): ActionItem {
   const created = raw.createdAt || nowIso();
-  return {
+  const base: ActionItem = {
     id: raw.id,
     title: raw.title,
     createdBy: (raw.createdBy as string) || "",
@@ -58,6 +74,15 @@ export function normalizeItem(
     createdAt: created,
     updatedAt: raw.updatedAt || created,
   };
+  // Preserve optional operational workspace fields
+  if (raw.taskType !== undefined) base.taskType = raw.taskType as TaskType;
+  if (raw.requiresApproval !== undefined) base.requiresApproval = raw.requiresApproval;
+  if (raw.assignedTo !== undefined) base.assignedTo = raw.assignedTo;
+  if (raw.claimable !== undefined) base.claimable = raw.claimable;
+  if (raw.comments !== undefined) base.comments = raw.comments;
+  if (raw.updates !== undefined) base.updates = raw.updates;
+  if (raw.activity !== undefined) base.activity = raw.activity;
+  return base;
 }
 
 function normalizeDoc(doc: ActionDoc): ActionDoc {

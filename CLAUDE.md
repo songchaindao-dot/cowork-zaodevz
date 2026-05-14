@@ -6,43 +6,57 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev      # start dev server at http://localhost:3000
-npm run build    # production build (TypeScript + Next.js compile)
+npm run build    # production build — TypeScript + Next.js compile (use this to catch type errors)
 npm run lint     # ESLint via next lint
 npm run start    # run production build locally
 ```
 
-There is no test suite. Validate changes by running `npm run build` (catches type errors) and manually testing in the browser.
+No test suite. Validate changes with `npm run build` then manual browser testing.
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` and set:
-- `ZAAL_PASSWORD`, `IMAN_PASSWORD` — login passwords
-- `AUTH_SECRET` — 32+ hex chars for HMAC cookie signing
-- `GITHUB_TOKEN` — fine-grained PAT with `contents:write` (optional in dev; required on Vercel for saves to persist)
-- `GITHUB_REPO` — `bettercallzaal/imanprojects`
-- `GITHUB_BRANCH` — `main`
-- `MINIMAX_API_KEY` — MiniMax key for the `/chat` Assistant (optional; route returns 503 without it)
-- `MINIMAX_API_URL` / `MINIMAX_MODEL` — optional overrides (default `https://api.minimax.io/v1/chat/completions`, `MiniMax-M2.7`)
+Copy `.env.example` to `.env.local`:
 
-Without `GITHUB_TOKEN`, saves write to `data/actions.json` on local disk instead.
+| Var | Purpose |
+|-----|---------|
+| `ZAAL_PASSWORD` | Login password for Zaal (lead) |
+| `IMAN_PASSWORD` | Login password for Iman (lead) |
+| `THYREV_PASSWORD` | Login password for ThyRev (worker) |
+| `AUTH_SECRET` | 32+ hex chars for HMAC cookie signing |
+| `GITHUB_TOKEN` | Fine-grained PAT with `contents:write` — required on Vercel for saves to persist |
+| `GITHUB_REPO` | `songchaindao-dot/cowork-zaodevz` |
+| `GITHUB_BRANCH` | `main` |
+| `MINIMAX_API_KEY` | MiniMax key for the `/chat` Assistant — optional; `/api/chat` returns 503 without it |
+| `MINIMAX_API_URL` / `MINIMAX_MODEL` | Optional overrides (default `https://api.minimax.io/v1/chat/completions`, `MiniMax-M2.7`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Phase 2 — leave blank until Supabase migration |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Phase 2 |
+
+Without `GITHUB_TOKEN`, saves fall back to `data/actions.json` on local disk.
+
+## Git remotes
+
+The only remote is `origin` → `https://github.com/songchaindao-dot/cowork-zaodevz`:
+
+```bash
+git push origin main   # deploys to Vercel
+```
 
 ## Architecture
 
-**Stack:** Next.js 15 App Router, React 19, TypeScript, Tailwind v3. No database — data lives in `data/actions.json`.
+**Stack:** Next.js 15 App Router, React 19, TypeScript, Tailwind v3. No database — data lives in `data/actions.json`, persisted via GitHub Contents API commits.
 
 ### Data flow
 
 ```
-Browser form submit
-  → Next.js Server Action (src/app/actions.ts)
-  → requireSession() checks HMAC-signed cookie
-  → getActions() reads from GitHub Contents API (or local FS fallback)
-  → mutate doc
-  → saveActions() writes back via GitHub Contents API (commits to repo)
-  → revalidatePath("/") triggers page re-render
+Browser → Server Action (actions.ts)
+  → requireSession() — verifies HMAC cookie
+  → getActions() — reads data/actions.json from GitHub Contents API
+  → mutate in memory
+  → saveActions() — writes back via GitHub Contents API (creates a commit)
+  → revalidatePath("/") — triggers server re-render
 ```
 
-Every save creates a git commit — the commit history is the audit log.
+Every save is a git commit — the commit history is the audit log.
 
 ### AI chat flow
 
@@ -59,31 +73,81 @@ Every save creates a git commit — the commit history is the audit log.
 
 The system prompt is built server-side only; any client-supplied `system` role is dropped. The MiniMax key never reaches the browser. The assistant is read-only — it suggests board changes, it does not call mutations.
 
-### Auth model
+### Auth & roles
 
-`src/lib/auth.ts` — no NextAuth, no database. Login checks password against env vars, then sets an HMAC-signed `iman-session` cookie (`user.expiry.sig`). `src/middleware.ts` checks cookie presence (redirects to `/login` if missing); server-side `requireSession()` verifies the HMAC signature before any mutation.
+`src/lib/auth.ts` — no NextAuth. Passwords checked against env vars, then an HMAC-signed `iman-session` cookie is set (`user.expiry.sig` format). Middleware checks cookie presence; `requireSession()` verifies the HMAC before any mutation.
+
+**Two roles:**
+- **Leads** (`zaal`, `iman`) — full permissions: approve/reject updates, delete tasks, mark tasks DONE directly, review ThyRev's submissions.
+- **Workers** (`thyrev`) — can create tasks, submit updates, claim tasks, change status to TODO/WIP/BLOCKED. Cannot mark DONE directly (always goes to pending review). Cannot delete or review.
+
+`isLead(user)` in `auth.ts` gates lead-only actions. Enforced in: `submitUpdate` (workers always get `reviewStatus: "pending"`), `patchField` (DONE blocked for workers), `reviewUpdate`, `deleteItem`.
+
+### Three portals
+
+| Route | Categories | Background tint |
+|-------|-----------|-----------------|
+| `/` | Dev — ZAO Devz, Site/Tech, Ops, Bounty, Other | Blue |
+| `/music` | WaveWarZ Zambia, Recording, Distribution, Release, Artist Onboarding | Purple |
+| `/marketing` | Social, Brand, Content, Campaigns | Amber |
+
+Each portal is a separate server component that filters `doc.items` by its category list and renders `<Board>`. Navigation between portals via `<NavBar>`.
 
 ### Key files
 
 | File | Role |
 |------|------|
-| `src/lib/types.ts` | All domain types (`ActionItem`, `ActionDoc`) + pure utility functions (`ageDays`, `cycleDays`, `isAging`) — **no Node/browser imports**, safe to import from client components |
-| `src/lib/data.ts` | Re-exports everything from `types.ts` + all server-side I/O: `getActions`, `saveActions`, `normalizeItem`, `newId` — **server-only** (uses `node:fs`, `process.env`) |
-| `src/app/actions.ts` | All `"use server"` mutations: `createItem`, `quickCreate`, `updateItem`, `patchField`, `deleteItem`, `logout` |
-| `src/components/Board.tsx` | Entire client-side UI: Kanban columns, filter bar, card components, inline edit modal — one large `"use client"` component |
-| `src/app/page.tsx` | Server component: auth gate, loads data, computes stats bar values, renders `<Board>` |
+| `src/lib/types.ts` | All domain types + pure utils (`ageDays`, `cycleDays`). **No Node/browser imports** — safe to use in client components. |
+| `src/lib/data.ts` | Re-exports `types.ts` + server-side I/O: `getActions`, `saveActions`, `normalizeItem`, `newId`. **Server-only** (uses `node:fs`). |
+| `src/lib/auth.ts` | `verifyPassword`, `createSession`, `getSession`, `requireSession`, `isLead`. |
+| `src/lib/todo-parser.ts` | Client-safe text→task parser. Pure functions, no imports from server or browser APIs. Used by `TodoPanel`. |
+| `src/app/actions.ts` | All `"use server"` mutations: `createItem`, `quickCreate`, `updateItem`, `patchField`, `deleteItem`, `addComment`, `submitUpdate`, `reviewUpdate`, `todoProcess`, `claimTask`, `logout`. |
+| `src/components/Board.tsx` | Main client UI: Kanban columns, filter bar, cards, Todo trigger + panel. `"use client"`. |
+| `src/components/TaskRoom.tsx` | Full-screen slide-in panel for a single task: details form, activity timeline, comments, update submission, review queue. |
+| `src/components/TodoPanel.tsx` | Floating ✦ Todo button + 3-phase modal (input → preview → done). Calls `todoProcess` and `claimTask`. |
+| `src/middleware.ts` | Edge middleware — redirects unauthenticated requests to `/login`. Cookie check only (no HMAC — that's in `requireSession`). |
 | `src/app/api/chat/route.ts` | `POST` MiniMax proxy — auth-gated, builds the board-aware system prompt, streams tokens back. **Server-only.** |
-| `src/app/chat/page.tsx` | Server component: auth gate, renders `<Chat>` |
-| `src/components/Chat.tsx` | `"use client"` streaming chat UI for the Assistant tab |
+| `src/app/chat/page.tsx` | Server component: auth gate, renders `<Chat>`. |
+| `src/components/Chat.tsx` | `"use client"` streaming chat UI for the Assistant tab. |
 
 ### Client/server boundary
 
-`Board.tsx` imports types from `src/lib/types` (safe — no server APIs). It must **never** import from `src/lib/data` (Node.js only). Server actions in `src/app/actions.ts` are imported directly by `Board.tsx` via `"use server"` — Next.js handles the serialization boundary.
+`Board.tsx` and `TodoPanel.tsx` import from `src/lib/types` and `src/lib/todo-parser` only (both safe). They must **never** import from `src/lib/data` (Node.js only). Server actions from `src/app/actions.ts` cross the boundary via Next.js `"use server"`.
 
 ### Data model
 
-`ActionItem` fields: `id`, `title`, `owner` (Zaal/Iman/Both), `status` (TODO/WIP/BLOCKED/DONE), `category`, `priority` (P1/P2/P3), `phase` (DMAIC), `due`, `notes`, `important`, `urgent`, `createdBy`, `completedAt`, `completedBy`, `createdAt`, `updatedAt`.
+`ActionItem` key fields:
 
-## Phase 2 context
+```
+id, title, createdBy, owner (Zaal|Iman|ThyRev|Both), status (TODO|WIP|BLOCKED|DONE)
+category, priority (P1|P2|P3), phase (DMAIC), due, notes, important, urgent
+createdAt, updatedAt, completedAt, completedBy
+taskType?, requiresApproval?, assignedTo?, claimable?
+comments?: Comment[], updates?: TaskUpdate[], activity?: ActivityEvent[]
+```
 
-Read `BACKLOG.md` before adding features. The planned Phase 2 swap is `src/lib/data.ts` → Supabase, keeping the same exported function signatures so `actions.ts` is untouched. Don't add infrastructure that conflicts with this migration path.
+`claimable: true` marks tasks created via Todo with no owner — cards show an amber **CLAIM** badge and button. Claiming sets `owner` to the claimer and `claimable: false`.
+
+### Todo feature
+
+`TodoPanel` → `parseText()` (in `todo-parser.ts`) → preview → `todoProcess()` server action.
+
+Parser logic: splits text into lines, detects task-like lines (list markers + action verbs), matches against existing tasks by Jaccard word-overlap (threshold 0.38). Matched lines produce `update_status` or `add_note` actions; unmatched task-like lines produce `create` actions. Owner/status/priority extracted from keywords.
+
+### Approval workflow
+
+Any task can have `requiresApproval: true`. Workers (`thyrev`) always get forced approval regardless. When an update requires approval, `reviewStatus: "pending"` — status doesn't change until a lead approves via `reviewUpdate`. Review queue surfaces in `TaskRoom` (LogPanel) and the column header badge.
+
+## UI conventions
+
+- All interactive inputs use `bg-[#0b1220]` (solid dark) — never `bg-transparent` or `bg-black/30`.
+- Modals/overlays use `bg-[#07111e]` with `border border-white/[0.12]`.
+- Owner badge colors: Zaal = blue, Iman = purple, ThyRev = emerald, Both = slate.
+- Priority dots: P1 = red, P2 = amber, P3 = emerald.
+- `zao-ink` = `#0f1d33`, `zao-navy` = `#0a1628`, `zao-accent` = `#3b82f6`.
+
+## Phase roadmap
+
+- **Phase 2:** Swap `src/lib/data.ts` for Supabase (keep identical exported function signatures so `actions.ts` is untouched). See `BACKLOG.md`.
+- **Phase 3:** Bot API (`/api/v1/items`) with bearer token auth for Hermes agent.
+- **Phase 4:** Hermes imanagent on VPS — Telegram bot, daily summaries, slash commands.

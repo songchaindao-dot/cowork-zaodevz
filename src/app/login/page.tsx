@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { getSession, verifyPassword, createSession } from "@/lib/auth";
+import { PasswordInput } from "@/components/PasswordInput";
 import ZaoLogo from "../../../ZAO LOGO.jpg";
 
 async function loginAction(formData: FormData): Promise<void> {
@@ -43,19 +44,14 @@ export default async function LoginPage({
             <span className="text-white">Co-</span>
             <span className="text-yellow-400">Work</span>
           </div>
-          <p className="text-sm text-white/55">ZAO Devz action tracker</p>
+          <p className="text-sm text-white/55">ZAO Action Tracker</p>
         </div>
         <input type="hidden" name="from" value={from} />
         <label className="block">
           <span className="text-xs uppercase tracking-wider text-white/60">Password</span>
-          <input
-            name="password"
-            type="password"
-            autoFocus
-            required
-            className="mt-1.5 w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-zao-accent focus:ring-1 focus:ring-zao-accent/40"
-            placeholder="enter password"
-          />
+          <div className="mt-1.5">
+            <PasswordInput />
+          </div>
         </label>
         {error && (
           <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
@@ -69,7 +65,7 @@ export default async function LoginPage({
           Sign in
         </button>
         <div className="pt-2 border-t border-white/10 space-y-1.5 text-xs text-white/45 text-center">
-          <p>Two users. One TaskBoard.</p>
+          <p>Team workspace — sign in with your password.</p>
         </div>
       </form>
     </main>

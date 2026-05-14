@@ -4,6 +4,7 @@ import { getActions, ageDays } from "@/lib/data";
 import { logout } from "./actions";
 import { Board } from "@/components/Board";
 import { NavBar } from "@/components/NavBar";
+import { PWAInstallButton } from "@/components/PWAInstallButton";
 import { DEV_CATEGORIES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export default async function Page() {
     return Date.now() - d < 7 * 24 * 60 * 60 * 1000;
   }).length;
 
-  const userLabel = user === "zaal" ? "Zaal" : "Iman";
+  const userLabel = user === "zaal" ? "Zaal" : user === "iman" ? "Iman" : "ThyRev";
 
   return (
     <main className="min-h-screen relative text-white px-4 bg-[#041225] overflow-hidden">
@@ -47,6 +48,7 @@ export default async function Page() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <PWAInstallButton />
               <UserBadge name={userLabel} />
               <form action={logout}>
                 <button className="text-xs rounded-lg border border-white/10 px-2.5 py-1.5 hover:bg-white/5 text-white/70">
@@ -93,7 +95,12 @@ export default async function Page() {
 
 function UserBadge({ name }: { name: string }) {
   const initial = name.charAt(0).toUpperCase();
-  const tone = name === "Zaal" ? "bg-blue-500/30 border-blue-400/50" : "bg-purple-500/30 border-purple-400/50";
+  const tone =
+    name === "Zaal"
+      ? "bg-blue-500/30 border-blue-400/50"
+      : name === "Iman"
+      ? "bg-purple-500/30 border-purple-400/50"
+      : "bg-emerald-500/30 border-emerald-400/50";
   return (
     <div className={`flex items-center gap-2 rounded-full border ${tone} px-2.5 py-1`}>
       <span className="h-5 w-5 rounded-full bg-black/40 flex items-center justify-center text-xs font-bold">
