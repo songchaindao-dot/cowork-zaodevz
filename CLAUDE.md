@@ -33,14 +33,11 @@ Without `GITHUB_TOKEN`, saves fall back to `data/actions.json` on local disk.
 
 ## Git remotes
 
-The canonical deployment repo is `cowork-zaodevz` (remote name `cowork-zaodevz`):
+The only remote is `origin` → `https://github.com/songchaindao-dot/cowork-zaodevz`:
 
 ```bash
-git push cowork-zaodevz main   # deploys to Vercel
-git push origin main           # pushes to bettercallzaal/imanprojects (backup)
+git push origin main   # deploys to Vercel
 ```
-
-Always push to `cowork-zaodevz` for changes to go live.
 
 ## Architecture
 
