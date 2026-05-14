@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-14T13:08:36.919Z",
+  "updatedAt": "2026-05-14T16:13:53.278Z",
   "items": [
     {
       "id": "1",
@@ -303,6 +303,59 @@
       "title": "see if notifications work",
       "createdBy": "thyrev",
       "owner": "Iman",
+      "status": "DONE",
+      "category": "ZAO Devz",
+      "priority": "P2",
+      "important": true,
+      "urgent": true,
+      "completedAt": "2026-05-14T16:12:59.939Z",
+      "completedBy": "iman",
+      "phase": "Define",
+      "due": "",
+      "notes": "",
+      "createdAt": "2026-05-14T13:08:36.919Z",
+      "updatedAt": "2026-05-14T16:12:59.939Z",
+      "claimable": false,
+      "comments": [
+        {
+          "id": "c-1778775138024-ioh9",
+          "userId": "iman",
+          "displayName": "Iman",
+          "content": "Tested and it works",
+          "createdAt": "2026-05-14T16:12:18.024Z"
+        }
+      ],
+      "activity": [
+        {
+          "id": "a-1778764116919-8w50",
+          "userId": "thyrev",
+          "displayName": "Thyrev",
+          "action": "created",
+          "createdAt": "2026-05-14T13:08:36.919Z"
+        },
+        {
+          "id": "a-1778775138024-5u78",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "commented",
+          "detail": "Tested and it works",
+          "createdAt": "2026-05-14T16:12:18.024Z"
+        },
+        {
+          "id": "a-1778775179939-hkj7",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "status_changed",
+          "detail": "TODO → DONE",
+          "createdAt": "2026-05-14T16:12:59.939Z"
+        }
+      ]
+    },
+    {
+      "id": "18",
+      "title": "Test Todo feature",
+      "createdBy": "iman",
+      "owner": "Open",
       "status": "TODO",
       "category": "ZAO Devz",
       "priority": "P2",
@@ -313,16 +366,16 @@
       "phase": "Define",
       "due": "",
       "notes": "",
-      "createdAt": "2026-05-14T13:08:36.919Z",
-      "updatedAt": "2026-05-14T13:08:36.919Z",
-      "claimable": false,
+      "createdAt": "2026-05-14T16:13:53.278Z",
+      "updatedAt": "2026-05-14T16:13:53.278Z",
+      "claimable": true,
       "activity": [
         {
-          "id": "a-1778764116919-8w50",
-          "userId": "thyrev",
-          "displayName": "Thyrev",
+          "id": "a-1778775233278-acpp",
+          "userId": "iman",
+          "displayName": "Iman",
           "action": "created",
-          "createdAt": "2026-05-14T13:08:36.919Z"
+          "createdAt": "2026-05-14T16:13:53.278Z"
         }
       ]
     }
