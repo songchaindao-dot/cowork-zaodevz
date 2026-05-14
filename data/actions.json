@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-14T16:12:18.024Z",
+  "updatedAt": "2026-05-14T16:12:59.939Z",
   "items": [
     {
       "id": "1",
@@ -303,19 +303,28 @@
       "title": "see if notifications work",
       "createdBy": "thyrev",
       "owner": "Iman",
-      "status": "TODO",
+      "status": "DONE",
       "category": "ZAO Devz",
       "priority": "P2",
       "important": true,
       "urgent": true,
-      "completedAt": "",
-      "completedBy": "",
+      "completedAt": "2026-05-14T16:12:59.939Z",
+      "completedBy": "iman",
       "phase": "Define",
       "due": "",
       "notes": "",
       "createdAt": "2026-05-14T13:08:36.919Z",
-      "updatedAt": "2026-05-14T16:12:18.024Z",
+      "updatedAt": "2026-05-14T16:12:59.939Z",
       "claimable": false,
+      "comments": [
+        {
+          "id": "c-1778775138024-ioh9",
+          "userId": "iman",
+          "displayName": "Iman",
+          "content": "Tested and it works",
+          "createdAt": "2026-05-14T16:12:18.024Z"
+        }
+      ],
       "activity": [
         {
           "id": "a-1778764116919-8w50",
@@ -331,15 +340,14 @@
           "action": "commented",
           "detail": "Tested and it works",
           "createdAt": "2026-05-14T16:12:18.024Z"
-        }
-      ],
-      "comments": [
+        },
         {
-          "id": "c-1778775138024-ioh9",
+          "id": "a-1778775179939-hkj7",
           "userId": "iman",
           "displayName": "Iman",
-          "content": "Tested and it works",
-          "createdAt": "2026-05-14T16:12:18.024Z"
+          "action": "status_changed",
+          "detail": "TODO → DONE",
+          "createdAt": "2026-05-14T16:12:59.939Z"
         }
       ]
     }
