@@ -21,6 +21,8 @@ Copy `.env.example` to `.env.local` and set:
 - `GITHUB_TOKEN` — fine-grained PAT with `contents:write` (optional in dev; required on Vercel for saves to persist)
 - `GITHUB_REPO` — `bettercallzaal/imanprojects`
 - `GITHUB_BRANCH` — `main`
+- `MINIMAX_API_KEY` — MiniMax key for the `/chat` Assistant (optional; route returns 503 without it)
+- `MINIMAX_API_URL` / `MINIMAX_MODEL` — optional overrides (default `https://api.minimax.io/v1/chat/completions`, `MiniMax-M2.7`)
 
 Without `GITHUB_TOKEN`, saves write to `data/actions.json` on local disk instead.
 
@@ -42,6 +44,21 @@ Browser form submit
 
 Every save creates a git commit — the commit history is the audit log.
 
+### AI chat flow
+
+```
+/chat page (server) — auth gate, renders <Chat>
+  → <Chat> (client) POSTs { messages } to /api/chat
+  → route handler: requireSession() verifies HMAC
+  → getActions() loads the live board
+  → builds a board-aware system prompt (status/owner/priority/age snapshot)
+  → fetches MiniMax with stream:true
+  → transforms OpenAI-style SSE into a plain UTF-8 token stream, strips <think> tags
+  → <Chat> reads the stream and appends tokens to the assistant bubble
+```
+
+The system prompt is built server-side only; any client-supplied `system` role is dropped. The MiniMax key never reaches the browser. The assistant is read-only — it suggests board changes, it does not call mutations.
+
 ### Auth model
 
 `src/lib/auth.ts` — no NextAuth, no database. Login checks password against env vars, then sets an HMAC-signed `iman-session` cookie (`user.expiry.sig`). `src/middleware.ts` checks cookie presence (redirects to `/login` if missing); server-side `requireSession()` verifies the HMAC signature before any mutation.
@@ -55,6 +72,9 @@ Every save creates a git commit — the commit history is the audit log.
 | `src/app/actions.ts` | All `"use server"` mutations: `createItem`, `quickCreate`, `updateItem`, `patchField`, `deleteItem`, `logout` |
 | `src/components/Board.tsx` | Entire client-side UI: Kanban columns, filter bar, card components, inline edit modal — one large `"use client"` component |
 | `src/app/page.tsx` | Server component: auth gate, loads data, computes stats bar values, renders `<Board>` |
+| `src/app/api/chat/route.ts` | `POST` MiniMax proxy — auth-gated, builds the board-aware system prompt, streams tokens back. **Server-only.** |
+| `src/app/chat/page.tsx` | Server component: auth gate, renders `<Chat>` |
+| `src/components/Chat.tsx` | `"use client"` streaming chat UI for the Assistant tab |
 
 ### Client/server boundary
 

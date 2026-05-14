@@ -25,6 +25,13 @@ const PORTALS = [
     dot: "bg-amber-400",
     activeClass: "bg-amber-500/20 text-amber-200 border-amber-500/40",
   },
+  {
+    href: "/chat",
+    label: "Assistant",
+    sub: "Ask the AI about the board",
+    dot: "bg-teal-400",
+    activeClass: "bg-teal-500/20 text-teal-200 border-teal-500/40",
+  },
 ];
 
 export function NavBar() {

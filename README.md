@@ -23,6 +23,7 @@ npm install
 cp .env.example .env.local
 # fill in ZAAL_PASSWORD, IMAN_PASSWORD, AUTH_SECRET
 # (GITHUB_TOKEN optional locally - falls back to writing data/actions.json directly)
+# (MINIMAX_API_KEY optional - without it the Assistant tab loads but send returns 503)
 npm run dev
 ```
 
@@ -37,6 +38,8 @@ Open `http://localhost:3000` -> redirects to `/login`.
    - `GITHUB_TOKEN` - fine-grained PAT w/ `contents:write` on `bettercallzaal/imanprojects` (optional but needed for edits to persist on Vercel)
    - `GITHUB_REPO` - `bettercallzaal/imanprojects`
    - `GITHUB_BRANCH` - `main`
+   - `MINIMAX_API_KEY` - MiniMax API key, powers the Assistant tab (optional - tab degrades to a 503 without it)
+   - `MINIMAX_API_URL` / `MINIMAX_MODEL` - optional overrides, sane defaults baked in
 3. Deploy. Each save in the app commits to `main`, which triggers a rebuild.
 
 ## Auth model
@@ -76,6 +79,7 @@ Open `http://localhost:3000` -> redirects to `/login`.
 - **Stats bar** - open / my WIP / blocked / aging / done last 7 days.
 - **Six Sigma signals** - aging badge (red after 14 days), cycle-time badge on Done items.
 - **Help modal** - "?" button shows quick how-to + Six Sigma cheat.
+- **AI Assistant** (`/chat`) - board-aware chat powered by MiniMax. Streams answers. The route handler injects a live snapshot of every item (status, owner, priority, age) into the system prompt, so you can ask "what's blocked?", "what should I work on?", "summarize Iman's WIP". Read-only - it tells you the change to make, it does not edit the board. API key is server-side only.
 
 ## Why GitHub-backed instead of DB
 - Zero infra. No KV, no Postgres, no Supabase.
