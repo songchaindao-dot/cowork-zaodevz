@@ -89,7 +89,7 @@ const EMPTY_FILTERS: Filters = {
   category: "",
   priority: "",
   phase: "",
-  mineOnly: false,
+  mineOnly: true,
   agingOnly: false,
 };
 
@@ -266,7 +266,8 @@ export function Board({
       if (filters.mineOnly) {
         const mine = currentUser.toLowerCase();
         const o = String(it.owner).toLowerCase();
-        if (o !== mine && o !== "both") return false;
+        const isOpenTask = it.claimable || o === "open";
+        if (o !== mine && o !== "both" && !isOpenTask) return false;
       }
       if (filters.agingOnly && it.status !== "DONE") {
         if (ageDays(it.createdAt) <= 14) return false;
@@ -355,13 +356,14 @@ export function Board({
         portalCategories={portalCategories}
         items={items}
         isLeadUser={!isWorker}
+        onOpenTask={setTaskRoomId}
       />
 
       {filtersActive && (
         <div className="text-xs text-white/50">
           showing {filtered.length} of {items.length} items
           <button
-            onClick={() => setFilters(EMPTY_FILTERS)}
+            onClick={() => setFilters({ ...EMPTY_FILTERS, mineOnly: true })}
             className="ml-3 underline hover:text-white/80"
           >
             clear filters
@@ -446,6 +448,7 @@ function FilterBar({
   portalCategories,
   items,
   isLeadUser,
+  onOpenTask,
 }: {
   filters: Filters;
   onChange: (f: Filters) => void;
@@ -454,6 +457,7 @@ function FilterBar({
   portalCategories: string[];
   items: ActionItem[];
   isLeadUser: boolean;
+  onOpenTask: (id: string) => void;
 }) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
   const me = currentUser.charAt(0).toUpperCase() + currentUser.slice(1);
@@ -466,7 +470,7 @@ function FilterBar({
           placeholder="Search title, notes, owner..."
           className="flex-1 rounded-xl bg-[#0b1220] border border-white/10 px-3 py-2 text-sm placeholder-white/30 focus:outline-none focus:border-zao-accent text-white"
         />
-        <NotificationBell items={items} currentUser={currentUser} isLeadUser={isLeadUser} />
+        <NotificationBell items={items} currentUser={currentUser} isLeadUser={isLeadUser} onOpenTask={onOpenTask} />
         <button
           onClick={onHelp}
           className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70 hover:bg-white/5"
@@ -480,7 +484,7 @@ function FilterBar({
         <Pill
           active={filters.mineOnly}
           onClick={() => set({ mineOnly: !filters.mineOnly })}
-          label={`Mine (${me})`}
+          label={filters.mineOnly ? `My Tasks` : `All Tasks`}
         />
         <Pill
           active={filters.agingOnly}

@@ -36,10 +36,12 @@ export function NotificationBell({
   items,
   currentUser,
   isLeadUser,
+  onOpenTask,
 }: {
   items: ActionItem[];
   currentUser: string;
   isLeadUser: boolean;
+  onOpenTask: (id: string) => void;
 }) {
   const userKey = currentUser.trim().toLowerCase() || "user";
   const notifsKey = `zao-notifs-v1:${userKey}`;
@@ -170,6 +172,16 @@ export function NotificationBell({
 
   const unread = notifs.filter((n) => !n.read).length;
 
+  function handleNotifClick(n: Notification) {
+    setNotifs((prev) => {
+      const updated = prev.map((x) => (x.id === n.id ? { ...x, read: true } : x));
+      window.localStorage.setItem(notifsKey, JSON.stringify(updated));
+      return updated;
+    });
+    setOpen(false);
+    onOpenTask(n.itemId);
+  }
+
   function markAllRead() {
     setNotifs((prev) => {
       const updated = prev.map((n) => ({ ...n, read: true }));
@@ -258,30 +270,34 @@ export function NotificationBell({
             ) : (
               <ul className="divide-y divide-white/5">
                 {notifs.map((n) => (
-                  <li
-                    key={n.id}
-                    className={`px-4 py-3 flex items-start gap-3 transition ${
-                      n.read ? "opacity-50" : "hover:bg-white/[0.03]"
-                    }`}
-                  >
-                    <span
-                      className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${TYPE_DOT[n.type]}`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm leading-snug ${
-                          n.read ? "text-white/60" : "text-white/90"
-                        }`}
-                      >
-                        {n.message}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-white/35">
-                        {relativeTime(n.createdAt)}
-                      </p>
-                    </div>
-                    {!n.read && (
-                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-                    )}
+                  <li key={n.id}>
+                    <button
+                      onClick={() => handleNotifClick(n)}
+                      className={`w-full text-left px-4 py-3 flex items-start gap-3 transition ${
+                        n.read
+                          ? "opacity-50 hover:opacity-80 hover:bg-white/[0.02]"
+                          : "hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <span
+                        className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${TYPE_DOT[n.type]}`}
+                      />
+                      <div className="flex-1 min-w-0 text-left">
+                        <p
+                          className={`text-sm leading-snug ${
+                            n.read ? "text-white/60" : "text-white/90"
+                          }`}
+                        >
+                          {n.message}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-white/35">
+                          {relativeTime(n.createdAt)} · tap to open task
+                        </p>
+                      </div>
+                      {!n.read && (
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                      )}
+                    </button>
                   </li>
                 ))}
               </ul>
