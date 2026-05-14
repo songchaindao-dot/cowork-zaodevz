@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Iman x Zaal — Action Tracker",
-  description: "ZAO Devz, WaveWarZ Zambia, social ops, POIDH bounty.",
+  title: "ZAO — Action Tracker",
+  description: "ZAO Action Tracker — Dev, Music, Marketing & Ops boards.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

@@ -44,7 +44,7 @@ export default async function LoginPage({
             <span className="text-white">Co-</span>
             <span className="text-yellow-400">Work</span>
           </div>
-          <p className="text-sm text-white/55">ZAO Devz action tracker</p>
+          <p className="text-sm text-white/55">ZAO Action Tracker</p>
         </div>
         <input type="hidden" name="from" value={from} />
         <label className="block">
