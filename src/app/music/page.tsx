@@ -39,15 +39,15 @@ export default async function MusicPage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(168,85,247,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(139,92,246,0.10),transparent_60%)]" />
       <div className="relative max-w-7xl mx-auto py-6 space-y-4">
 
-        <header className="flex flex-col gap-3 rounded-2xl bg-white/[0.06] backdrop-blur-xl border border-white/10 px-5 py-4">
-          <div className="flex items-center justify-between gap-3">
+        <header className="flex flex-col gap-3 rounded-2xl bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 sm:px-5 py-4">
+          <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">The Zao Co-Works</h1>
-              <p className="text-white/50 text-xs md:text-sm">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">The Zao Co-Works</h1>
+              <p className="text-white/50 text-xs mt-0.5">
                 Updated {new Date(doc.updatedAt).toLocaleString()}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <PWAInstallButton />
               <UserBadge name={userLabel} />
               <form action={logout}>
@@ -95,7 +95,12 @@ export default async function MusicPage() {
 
 function UserBadge({ name }: { name: string }) {
   const initial = name.charAt(0).toUpperCase();
-  const tone = name === "Zaal" ? "bg-blue-500/30 border-blue-400/50" : "bg-purple-500/30 border-purple-400/50";
+  const tone =
+    name === "Zaal"
+      ? "bg-blue-500/30 border-blue-400/50"
+      : name === "Iman"
+      ? "bg-purple-500/30 border-purple-400/50"
+      : "bg-emerald-500/30 border-emerald-400/50";
   return (
     <div className={`flex items-center gap-2 rounded-full border ${tone} px-2.5 py-1`}>
       <span className="h-5 w-5 rounded-full bg-black/40 flex items-center justify-center text-xs font-bold">
