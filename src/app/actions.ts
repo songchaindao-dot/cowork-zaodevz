@@ -629,7 +629,7 @@ RULES:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "MiniMax-M1",
+        model: "MiniMax-M2.7-highspeed",
         messages: [{ role: "system", content: systemPrompt }, ...history],
         temperature: 0.2,
         max_tokens: 1000,
