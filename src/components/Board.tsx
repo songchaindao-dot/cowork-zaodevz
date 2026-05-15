@@ -327,7 +327,7 @@ export function Board({
     filters.reviewsOnly ||
     filters.dueSoon;
 
-  const [deadlinesOpen, setDeadlinesOpen] = useState(false);
+  const [deadlinesOpen, setDeadlinesOpen] = useState(true);
 
   return (
     <div className="space-y-4">
@@ -1037,6 +1037,12 @@ function DeadlinesDashboard({
         </div>
         <span className={`text-white/30 text-sm transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
       </button>
+
+      {open && upcoming.length === 0 && (
+        <div className="border-t border-white/[0.07] px-4 py-4 text-xs text-white/35 text-center">
+          No tasks have due dates yet — open a task and set a deadline to see it here.
+        </div>
+      )}
 
       {open && upcoming.length > 0 && (
         <div className="border-t border-white/[0.07] divide-y divide-white/[0.05]">
