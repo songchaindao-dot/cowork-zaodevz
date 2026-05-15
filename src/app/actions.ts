@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { destroySession, requireSession, isLead } from "@/lib/auth";
+import { type ParsedAction } from "@/lib/todo-parser";
 import {
   getActions,
   saveActions,
@@ -506,6 +507,110 @@ export async function todoProcess(
   }
 
   return { created, updated };
+}
+
+export async function chatWithTodoBot(
+  form: FormData,
+): Promise<{ reply: string; actions: ParsedAction[] }> {
+  const user = await requireSession();
+  const messagesRaw = String(form.get("messages") ?? "[]");
+
+  let history: { role: "user" | "assistant"; content: string }[];
+  try {
+    history = JSON.parse(messagesRaw) as { role: "user" | "assistant"; content: string }[];
+  } catch {
+    return { reply: "Something went wrong. Please try again.", actions: [] };
+  }
+
+  const apiKey = process.env.MINIMAX_API_KEY;
+  if (!apiKey) {
+    return { reply: "AI assistant is not configured (missing MINIMAX_API_KEY).", actions: [] };
+  }
+
+  const doc = await getActions();
+  const active = doc.items.filter((it) => it.status !== "DONE").slice(0, 80);
+  const taskContext = active.length
+    ? active
+        .map(
+          (it) =>
+            `[${it.id}] "${it.title}" | ${it.status} | Owner:${it.owner} | ${it.priority} | ${it.category}`,
+        )
+        .join("\n")
+    : "No active tasks.";
+
+  const systemPrompt = `You are a smart task management AI assistant for an operational workspace used by a music and tech team called ZAO Devz.
+
+ACTIVE TASKS (ID | Title | Status | Owner | Priority | Category):
+${taskContext}
+
+You help team members manage tasks through natural conversation. You can:
+- Create new tasks
+- Update task statuses
+- Add notes to existing tasks
+- Answer questions about current work
+
+RESPONSE FORMAT:
+Reply with a short, friendly 1-2 sentence message. When you need to perform actions, append a JSON block after your message:
+
+\`\`\`json
+{"actions": []}
+\`\`\`
+
+ACTION SCHEMAS (all fields required):
+Create: {"type":"create","title":"Task name","owner":"Zaal"|"Iman"|"Both"|null,"status":"TODO"|"WIP"|"BLOCKED"|"DONE","priority":"P1"|"P2"|"P3","notes":"","claimable":false}
+Update status: {"type":"update_status","itemId":"EXACT_ID","matchedTitle":"exact title","newStatus":"TODO"|"WIP"|"BLOCKED"|"DONE"}
+Add note: {"type":"add_note","itemId":"EXACT_ID","matchedTitle":"exact title","note":"note text"}
+
+RULES:
+- Use EXACT IDs from the task list (the number in brackets like [5])
+- owner null means anyone can claim the task
+- Omit JSON block entirely when just answering questions
+- Status meanings: TODO=not started, WIP=in progress, BLOCKED=stuck, DONE=completed
+- Current user: ${displayName(user)}`;
+
+  try {
+    const res = await fetch("https://api.minimaxi.chat/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "MiniMax-Text-01",
+        messages: [{ role: "system", content: systemPrompt }, ...history],
+        temperature: 0.2,
+        max_tokens: 1000,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.status.toString());
+      console.error("MiniMax API error:", res.status, errText);
+      return { reply: "AI assistant is temporarily unavailable. Please try again.", actions: [] };
+    }
+
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const content = data.choices?.[0]?.message?.content ?? "";
+
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
+    let actions: ParsedAction[] = [];
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[1]) as { actions?: ParsedAction[] };
+        if (Array.isArray(parsed.actions)) actions = parsed.actions;
+      } catch {
+        // malformed AI JSON — skip actions
+      }
+    }
+
+    const reply = content.replace(/```json[\s\S]*?```/g, "").trim() || "Done!";
+    return { reply, actions };
+  } catch (err) {
+    console.error("chatWithTodoBot error:", err);
+    return { reply: "Something went wrong connecting to AI. Please try again.", actions: [] };
+  }
 }
 
 export async function claimTask(form: FormData): Promise<void> {
