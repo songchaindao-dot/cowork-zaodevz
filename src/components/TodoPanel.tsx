@@ -456,12 +456,22 @@ export function TodoPanel({
           </div>
 
           <div className="flex items-center gap-1">
-            {/* Mobile: "Chats" label to go back to sidebar */}
+            {/* Mobile: chip to switch between chat and sidebar */}
             <button
               onClick={() => setMobileView(v => v === "sidebar" ? "chat" : "sidebar")}
-              className="md:hidden text-[12px] text-white/40 hover:text-white/80 transition px-2 py-1.5 rounded-lg hover:bg-white/[0.06]"
+              className="md:hidden flex items-center gap-1.5 text-[12px] text-white/60 hover:text-white transition px-2.5 py-1.5 rounded-lg border border-white/[0.08] hover:bg-white/[0.07] active:scale-95"
             >
-              {mobileView === "sidebar" ? "← Back" : "Chats"}
+              {mobileView === "sidebar" ? (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 1L3 6l5 5"/></svg>
+                  Back
+                </>
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="10" height="10" rx="1.5"/><line x1="4" y1="1" x2="4" y2="11"/></svg>
+                  Chats
+                </>
+              )}
             </button>
             <button
               onClick={createNewChat}

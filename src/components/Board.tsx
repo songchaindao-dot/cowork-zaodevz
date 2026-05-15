@@ -743,7 +743,7 @@ function QuickAddForm({
         <select
           value={owner}
           onChange={(e) => setOwner(e.target.value as Owner)}
-          className="col-span-6 lg:col-span-2 rounded-lg bg-[#0b1220] border border-white/10 px-2 py-2 text-sm text-white/80"
+          className="col-span-7 sm:col-span-5 lg:col-span-2 rounded-lg bg-[#0b1220] border border-white/10 px-2 py-2 text-sm text-white/80"
           disabled={pending}
           aria-label="Responsible"
         >
@@ -756,7 +756,7 @@ function QuickAddForm({
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value as Priority)}
-          className="col-span-6 lg:col-span-1 rounded-lg bg-[#0b1220] border border-white/10 px-2 py-2 text-sm text-white/80"
+          className="col-span-5 sm:col-span-3 lg:col-span-1 rounded-lg bg-[#0b1220] border border-white/10 px-2 py-2 text-sm text-white/80"
           disabled={pending}
           aria-label="Priority"
         >
@@ -768,7 +768,7 @@ function QuickAddForm({
         </select>
         <button
           type="submit"
-          className="col-span-12 lg:col-span-3 rounded-lg bg-zao-accent hover:bg-blue-500 px-3 py-2 text-sm font-medium transition disabled:opacity-60"
+          className="col-span-12 sm:col-span-4 lg:col-span-3 rounded-lg bg-zao-accent hover:bg-blue-500 px-3 py-2 text-sm font-medium transition disabled:opacity-60"
           disabled={pending}
         >
           Enter task

@@ -30,7 +30,7 @@ const PORTALS = [
 export function NavBar() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1.5 rounded-xl bg-black/25 border border-white/10 p-1.5">
+    <nav className="flex gap-1 sm:gap-1.5 rounded-xl bg-black/25 border border-white/10 p-1 sm:p-1.5 overflow-x-auto scrollbar-none">
       {PORTALS.map(({ href, label, sub, dot, activeClass }) => {
         const active = pathname === href;
         return (
@@ -38,7 +38,7 @@ export function NavBar() {
             key={href}
             href={href}
             title={sub}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium border transition-all whitespace-nowrap flex-shrink-0 ${
               active
                 ? activeClass
                 : "border-transparent text-white/50 hover:text-white/80 hover:bg-white/[0.06]"

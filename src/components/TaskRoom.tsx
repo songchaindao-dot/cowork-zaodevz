@@ -155,7 +155,7 @@ export function TaskRoom({
           </div>
           <button
             onClick={onClose}
-            className="flex-shrink-0 text-white/40 hover:text-white text-2xl leading-none mt-0.5 transition"
+            className="flex-shrink-0 text-white/40 hover:text-white text-2xl leading-none p-2 -mr-2 rounded-lg hover:bg-white/[0.06] transition active:scale-95"
             aria-label="Close task room"
           >
             ×
