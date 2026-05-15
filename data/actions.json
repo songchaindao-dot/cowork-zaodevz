@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-15T11:04:45.133Z",
+  "updatedAt": "2026-05-15T11:05:07.122Z",
   "items": [
     {
       "id": "1",
@@ -355,7 +355,7 @@
       "id": "18",
       "title": "Test Todo feature",
       "createdBy": "iman",
-      "owner": "Open",
+      "owner": "Iman",
       "status": "TODO",
       "category": "ZAO Devz",
       "priority": "P2",
@@ -367,8 +367,8 @@
       "due": "",
       "notes": "",
       "createdAt": "2026-05-14T16:13:53.278Z",
-      "updatedAt": "2026-05-14T16:13:53.278Z",
-      "claimable": true,
+      "updatedAt": "2026-05-15T11:05:07.122Z",
+      "claimable": false,
       "activity": [
         {
           "id": "a-1778775233278-acpp",
@@ -376,6 +376,14 @@
           "displayName": "Iman",
           "action": "created",
           "createdAt": "2026-05-14T16:13:53.278Z"
+        },
+        {
+          "id": "a-1778843107122-go35",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "claimed",
+          "detail": "Claimed by Iman",
+          "createdAt": "2026-05-15T11:05:07.122Z"
         }
       ]
     },
