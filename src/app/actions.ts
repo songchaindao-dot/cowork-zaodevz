@@ -1,6 +1,5 @@
 "use server";
 
-import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { destroySession, requireSession, isLead } from "@/lib/auth";
@@ -576,9 +575,9 @@ export async function chatWithTodoBot(
     return { reply: "Something went wrong. Please try again.", actions: [] };
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.MINIMAX_API_KEY;
   if (!apiKey) {
-    return { reply: "AI assistant is not configured. Set ANTHROPIC_API_KEY in your environment.", actions: [] };
+    return { reply: "AI assistant is not configured. Set MINIMAX_API_KEY in your environment.", actions: [] };
   }
 
   const doc = await getActions();
@@ -623,18 +622,30 @@ RULES:
 - Current user: ${displayName(user)}`;
 
   try {
-    const client = new Anthropic({ apiKey });
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: history.map((m) => ({ role: m.role, content: m.content })),
+    const res = await fetch("https://api.minimaxi.chat/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "MiniMax-M1",
+        messages: [{ role: "system", content: systemPrompt }, ...history],
+        temperature: 0.2,
+        max_tokens: 1000,
+      }),
     });
 
-    const content = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as { type: "text"; text: string }).text)
-      .join("");
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error("MiniMax error:", res.status, errText);
+      return { reply: `AI error ${res.status}: ${errText.slice(0, 200) || "no details"}`, actions: [] };
+    }
+
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const content = data.choices?.[0]?.message?.content ?? "";
 
     const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
     let actions: ParsedAction[] = [];
@@ -652,7 +663,7 @@ RULES:
   } catch (err) {
     console.error("chatWithTodoBot error:", err);
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return { reply: `AI error: ${msg}`, actions: [] };
+    return { reply: `AI connection error: ${msg}`, actions: [] };
   }
 }
 
