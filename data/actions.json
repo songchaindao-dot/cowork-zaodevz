@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-15T11:05:07.122Z",
+  "updatedAt": "2026-05-15T11:05:13.249Z",
   "items": [
     {
       "id": "1",
@@ -367,7 +367,7 @@
       "due": "",
       "notes": "",
       "createdAt": "2026-05-14T16:13:53.278Z",
-      "updatedAt": "2026-05-15T11:05:07.122Z",
+      "updatedAt": "2026-05-15T11:05:13.249Z",
       "claimable": false,
       "activity": [
         {
@@ -384,6 +384,14 @@
           "action": "claimed",
           "detail": "Claimed by Iman",
           "createdAt": "2026-05-15T11:05:07.122Z"
+        },
+        {
+          "id": "a-1778843113249-mntg",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "claimed",
+          "detail": "Claimed by Iman",
+          "createdAt": "2026-05-15T11:05:13.249Z"
         }
       ]
     },
