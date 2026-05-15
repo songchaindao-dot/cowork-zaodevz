@@ -11,7 +11,9 @@ type NotifType =
   | "claimed"
   | "review_approved"
   | "review_rejected"
-  | "review_changes";
+  | "review_changes"
+  | "deadline_soon"
+  | "deadline_overdue";
 
 interface Notification {
   id: string;
@@ -28,11 +30,18 @@ interface MyPendingUpdate {
   reviewStatus: string;
 }
 
+interface DeadlineItem {
+  itemId: string;
+  due: string;
+  urgency: "critical" | "soon" | "overdue";
+}
+
 interface Snapshot {
   assignedIds: string[];
   openIds: string[];
   pendingUpdateIds: string[];
   myPendingUpdates: MyPendingUpdate[];
+  myDeadlines: DeadlineItem[];
 }
 
 const TYPE_DOT: Record<NotifType, string> = {
@@ -43,6 +52,8 @@ const TYPE_DOT: Record<NotifType, string> = {
   review_approved: "bg-emerald-400",
   review_rejected: "bg-red-400",
   review_changes: "bg-orange-400",
+  deadline_soon: "bg-amber-400",
+  deadline_overdue: "bg-red-500",
 };
 
 function genId(): string {
@@ -109,10 +120,28 @@ export function NotificationBell({
         .map((u) => ({ updateId: u.id, itemId: it.id, reviewStatus: u.reviewStatus }))
     );
 
+    // My tasks with imminent or overdue deadlines
+    const myDeadlines: DeadlineItem[] = [];
+    for (const it of items) {
+      if (it.status === "DONE" || !it.due) continue;
+      const isMe =
+        String(it.owner).toLowerCase() === userKey ||
+        (it.assignees || []).some((a) => a.toLowerCase() === userKey);
+      if (!isMe) continue;
+      const hours = (new Date(`${it.due}T00:00:00Z`).getTime() - Date.now()) / (1000 * 60 * 60);
+      if (hours < 0) {
+        myDeadlines.push({ itemId: it.id, due: it.due, urgency: "overdue" });
+      } else if (hours < 24) {
+        myDeadlines.push({ itemId: it.id, due: it.due, urgency: "critical" });
+      } else if (hours < 72) {
+        myDeadlines.push({ itemId: it.id, due: it.due, urgency: "soon" });
+      }
+    }
+
     // ── Persist snapshot ───────────────────────────────────────────
     window.localStorage.setItem(
       snapKey,
-      JSON.stringify({ assignedIds, openIds, pendingUpdateIds, myPendingUpdates }),
+      JSON.stringify({ assignedIds, openIds, pendingUpdateIds, myPendingUpdates, myDeadlines }),
     );
 
     if (!snap) return; // First visit — initialize only, no notifications
@@ -221,6 +250,33 @@ export function NotificationBell({
       if (message) {
         newNotifs.push({ id: genId(), type, itemId: prev.itemId, message, read: false, createdAt: now });
       }
+    }
+
+    // ── Deadline reminders ─────────────────────────────────────────
+    // Notify when a task newly enters the <72h window, or becomes overdue
+    const prevDeadlineMap = new Map((snap.myDeadlines || []).map((d) => [d.itemId, d.urgency]));
+    for (const d of myDeadlines) {
+      const prevUrgency = prevDeadlineMap.get(d.itemId);
+      const isNew = !prevUrgency;
+      const escalated =
+        prevUrgency === "soon" && (d.urgency === "critical" || d.urgency === "overdue") ||
+        prevUrgency === "critical" && d.urgency === "overdue";
+      if (!isNew && !escalated) continue;
+      const it = items.find((x) => x.id === d.itemId);
+      if (!it) continue;
+      newNotifs.push({
+        id: genId(),
+        type: d.urgency === "overdue" ? "deadline_overdue" : "deadline_soon",
+        itemId: d.itemId,
+        message:
+          d.urgency === "overdue"
+            ? `Overdue: ${it.title} (was due ${d.due})`
+            : d.urgency === "critical"
+            ? `Due today: ${it.title}`
+            : `Due soon (${d.due}): ${it.title}`,
+        read: false,
+        createdAt: now,
+      });
     }
 
     if (newNotifs.length === 0) return;

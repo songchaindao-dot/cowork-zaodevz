@@ -12,39 +12,33 @@ export function GET() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #041225 0%, #0c2340 100%)",
-          borderRadius: "24px",
+          background: "linear-gradient(145deg, #041225 0%, #0a1f3d 60%, #0c2a50 100%)",
+          borderRadius: "38px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
           <div
             style={{
-              fontSize: 72,
+              fontSize: 80,
               fontWeight: 900,
               color: "#3B82F6",
               fontFamily: "system-ui, sans-serif",
-              letterSpacing: "-2px",
+              letterSpacing: "-3px",
               lineHeight: 1,
             }}
           >
-            ZC
+            ZAO
           </div>
           <div
             style={{
-              fontSize: 18,
-              color: "#60A5FA",
+              fontSize: 16,
+              color: "#93C5FD",
               fontFamily: "system-ui, sans-serif",
-              letterSpacing: "3px",
+              letterSpacing: "5px",
+              fontWeight: 600,
             }}
           >
-            WORKS
+            CO-WORKS
           </div>
         </div>
       </div>

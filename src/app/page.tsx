@@ -39,15 +39,15 @@ export default async function Page() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(14,165,233,0.10),transparent_60%)]" />
       <div className="relative max-w-7xl mx-auto py-6 space-y-4">
 
-        <header className="flex flex-col gap-3 rounded-2xl bg-white/[0.06] backdrop-blur-xl border border-white/10 px-5 py-4">
-          <div className="flex items-center justify-between gap-3">
+        <header className="flex flex-col gap-3 rounded-2xl bg-white/[0.06] backdrop-blur-xl border border-white/10 px-4 sm:px-5 py-4">
+          <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">The Zao Co-Works</h1>
-              <p className="text-white/50 text-xs md:text-sm">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">The Zao Co-Works</h1>
+              <p className="text-white/50 text-xs mt-0.5">
                 Updated {new Date(doc.updatedAt).toLocaleString()}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <PWAInstallButton />
               <UserBadge name={userLabel} />
               <form action={logout}>

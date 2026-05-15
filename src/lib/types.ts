@@ -101,7 +101,12 @@ export type ActionItem = {
   completedAt: string;
   completedBy: string;
   phase: Phase;
-  due: string;
+  due: string;           // delivery deadline (YYYY-MM-DD)
+  claimBy?: string;      // deadline for claiming open task (YYYY-MM-DD)
+  assignees?: string[];  // extra tagged users beyond primary owner
+  holdNote?: string;     // note explaining why task is on hold / paused
+  timeTracked?: number;  // total seconds logged
+  timerStartedAt?: string; // ISO — current running timer session start
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -138,6 +143,27 @@ export function cycleDays(
 export function isAging(it: ActionItem): boolean {
   if (it.status === "DONE") return false;
   return ageDays(it.createdAt) > 14;
+}
+
+export type DeadlineUrgency = "overdue" | "critical" | "soon" | "ok";
+
+export function deadlineUrgency(due: string): DeadlineUrgency | null {
+  if (!due) return null;
+  const d = new Date(`${due}T00:00:00Z`);
+  if (!Number.isFinite(d.getTime())) return null;
+  const hours = (d.getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hours < 0) return "overdue";
+  if (hours < 24) return "critical";
+  if (hours < 72) return "soon";
+  return "ok";
+}
+
+export function formatTrackedTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return `${seconds}s`;
 }
 
 export function relativeTime(iso: string): string {

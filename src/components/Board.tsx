@@ -10,6 +10,7 @@ import {
   OWNERS,
   ageDays,
   cycleDays,
+  deadlineUrgency,
   type ActionItem,
   type ActionStatus,
   type Owner,
@@ -82,6 +83,7 @@ type Filters = {
   mineOnly: boolean;
   agingOnly: boolean;
   reviewsOnly: boolean;
+  dueSoon: boolean;
 };
 
 const EMPTY_FILTERS: Filters = {
@@ -93,6 +95,7 @@ const EMPTY_FILTERS: Filters = {
   mineOnly: true,
   agingOnly: false,
   reviewsOnly: false,
+  dueSoon: false,
 };
 
 function parseDueDate(raw: string): Date | null {
@@ -270,7 +273,8 @@ export function Board({
         const o = String(it.owner).toLowerCase();
         const isOpenTask = it.claimable || o === "open";
         const iCreated = String(it.createdBy || "").toLowerCase() === mine;
-        if (o !== mine && o !== "both" && !isOpenTask && !iCreated) return false;
+        const isAssigned = (it.assignees || []).some((a) => a.toLowerCase() === mine);
+        if (o !== mine && o !== "both" && !isOpenTask && !iCreated && !isAssigned) return false;
       }
       if (filters.agingOnly && it.status !== "DONE") {
         if (ageDays(it.createdAt) <= 14) return false;
@@ -280,6 +284,10 @@ export function Board({
       if (filters.reviewsOnly) {
         const hasPending = (it.updates || []).some((u) => u.reviewStatus === "pending");
         if (!hasPending) return false;
+      }
+      if (filters.dueSoon && it.status !== "DONE") {
+        const u = deadlineUrgency(it.due);
+        if (!u || u === "ok") return false;
       }
       return true;
     });
@@ -316,7 +324,10 @@ export function Board({
     filters.phase ||
     filters.mineOnly ||
     filters.agingOnly ||
-    filters.reviewsOnly;
+    filters.reviewsOnly ||
+    filters.dueSoon;
+
+  const [deadlinesOpen, setDeadlinesOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -379,6 +390,15 @@ export function Board({
         </div>
       )}
 
+      {/* Deadlines dashboard */}
+      <DeadlinesDashboard
+        items={items}
+        open={deadlinesOpen}
+        onToggle={() => setDeadlinesOpen((v) => !v)}
+        onOpenRoom={setTaskRoomId}
+        currentUser={currentUser}
+      />
+
       {/* Mobile: status tabs + single column */}
       <div className="md:hidden">
         <div className="grid grid-cols-4 gap-1 rounded-lg bg-zao-ink p-1 border border-white/10">
@@ -439,6 +459,7 @@ export function Board({
         items={items}
         open={todoOpen}
         onClose={() => setTodoOpen(false)}
+        currentUser={currentUser}
       />
       <TodoTrigger
         onClick={() => setTodoOpen(true)}
@@ -492,7 +513,7 @@ function FilterBar({
           ?
         </button>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
         <Pill
           active={filters.mineOnly}
           onClick={() => set({ mineOnly: !filters.mineOnly })}
@@ -512,6 +533,12 @@ function FilterBar({
             tone="amber"
           />
         )}
+        <Pill
+          active={filters.dueSoon}
+          onClick={() => set({ dueSoon: !filters.dueSoon })}
+          label="Due Soon"
+          tone="red"
+        />
         <Divider />
         <SelectPill
           value={filters.owner}
@@ -793,6 +820,9 @@ function Card({
   const ownerStr = String(item.owner);
   const commentCount = (item.comments || []).length;
   const pendingReviews = (item.updates || []).filter((u) => u.reviewStatus === "pending").length;
+  const urgency = item.status !== "DONE" ? deadlineUrgency(item.due) : null;
+  const claimUrgency = item.claimable && item.claimBy ? deadlineUrgency(item.claimBy) : null;
+  const assignees = item.assignees || [];
 
   function setField(field: string, value: string) {
     const fd = new FormData();
@@ -867,9 +897,35 @@ function Card({
         >
           {item.phase}
         </span>
-        {item.due && (
-          <span className="px-1.5 py-0.5 rounded text-[10px] border border-white/10 text-white/60">
-            due {item.due}
+        {item.due && urgency && (
+          <span className={`px-1.5 py-0.5 rounded text-[10px] border font-medium ${
+            urgency === "overdue" ? "border-red-500/60 bg-red-500/15 text-red-300"
+            : urgency === "critical" ? "border-orange-500/50 bg-orange-500/10 text-orange-300"
+            : urgency === "soon" ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+            : "border-white/10 text-white/55"
+          }`}>
+            {urgency === "overdue" ? `overdue ${item.due}` : `due ${item.due}`}
+          </span>
+        )}
+        {claimUrgency && item.claimBy && (
+          <span className={`px-1.5 py-0.5 rounded text-[10px] border ${
+            claimUrgency === "overdue" ? "border-red-500/50 text-red-300 bg-red-500/10"
+            : "border-amber-500/40 text-amber-200 bg-amber-500/8"
+          }`}>
+            claim by {item.claimBy}
+          </span>
+        )}
+        {assignees.length > 0 && (
+          <span className="flex items-center gap-0.5">
+            {assignees.map((a) => (
+              <span key={a} className={`px-1.5 py-0.5 rounded text-[10px] border ${
+                a === "Zaal" ? "border-blue-500/30 text-blue-300 bg-blue-500/10"
+                : a === "Iman" ? "border-purple-500/30 text-purple-300 bg-purple-500/10"
+                : "border-emerald-500/30 text-emerald-300 bg-emerald-500/10"
+              }`} title={`Tagged: ${a}`}>
+                {a.slice(0, 1)}
+              </span>
+            ))}
           </span>
         )}
         {aging && (
@@ -928,6 +984,98 @@ function Card({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+function DeadlinesDashboard({
+  items,
+  open,
+  onToggle,
+  onOpenRoom,
+  currentUser,
+}: {
+  items: ActionItem[];
+  open: boolean;
+  onToggle: () => void;
+  onOpenRoom: (id: string) => void;
+  currentUser: string;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = items
+    .filter((it) => it.status !== "DONE" && it.due)
+    .sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))
+    .slice(0, 12);
+
+  const overdueCount = upcoming.filter((it) => it.due < today).length;
+  const criticalCount = upcoming.filter((it) => {
+    const u = deadlineUrgency(it.due);
+    return u === "critical" || u === "soon";
+  }).length;
+
+  return (
+    <div className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.03] transition"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">Deadlines</span>
+          {overdueCount > 0 && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-300 font-semibold">
+              {overdueCount} overdue
+            </span>
+          )}
+          {criticalCount > 0 && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 font-semibold">
+              {criticalCount} urgent
+            </span>
+          )}
+          {upcoming.length === 0 && (
+            <span className="text-[11px] text-white/30">No tasks with deadlines</span>
+          )}
+        </div>
+        <span className={`text-white/30 text-sm transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
+      </button>
+
+      {open && upcoming.length > 0 && (
+        <div className="border-t border-white/[0.07] divide-y divide-white/[0.05]">
+          {upcoming.map((it) => {
+            const urgency = deadlineUrgency(it.due);
+            const mine =
+              String(it.owner).toLowerCase() === currentUser.toLowerCase() ||
+              (it.assignees || []).some((a) => a.toLowerCase() === currentUser.toLowerCase());
+            return (
+              <button
+                key={it.id}
+                onClick={() => onOpenRoom(it.id)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.04] text-left transition"
+              >
+                <span className={`flex-shrink-0 h-2 w-2 rounded-full ${
+                  urgency === "overdue" ? "bg-red-400"
+                  : urgency === "critical" ? "bg-orange-400"
+                  : urgency === "soon" ? "bg-amber-400"
+                  : "bg-white/20"
+                }`} />
+                <span className="flex-1 min-w-0 text-sm text-white/80 truncate">{it.title}</span>
+                <span className="flex items-center gap-2 flex-shrink-0">
+                  {mine && (
+                    <span className="text-[10px] text-blue-400">mine</span>
+                  )}
+                  <span className={`text-[11px] font-medium ${
+                    urgency === "overdue" ? "text-red-300"
+                    : urgency === "critical" ? "text-orange-300"
+                    : urgency === "soon" ? "text-amber-300"
+                    : "text-white/45"
+                  }`}>
+                    {it.due}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

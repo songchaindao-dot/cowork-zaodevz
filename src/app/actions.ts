@@ -9,6 +9,7 @@ import {
   saveActions,
   newId,
   normalizeItem,
+  formatTrackedTime,
   type ActionItem,
   type ActionStatus,
   type Priority,
@@ -102,6 +103,19 @@ function readForm(form: FormData, id: string, actor: string, prev?: ActionItem):
     // Auto-claimable: Open owner means anyone can claim it
     claimable: ownerVal === "Open",
   });
+  // Deadline & collaboration extensions
+  const claimBy = String(form.get("claimBy") ?? prev?.claimBy ?? "").trim();
+  if (claimBy) next.claimBy = claimBy;
+  else delete next.claimBy;
+  const holdNote = String(form.get("holdNote") ?? prev?.holdNote ?? "").trim();
+  if (holdNote) next.holdNote = holdNote;
+  else delete next.holdNote;
+  // Assignees: form.getAll("assignees") returns array of selected values
+  const assigneesRaw = form.getAll("assignees").map(String).filter(Boolean);
+  next.assignees = assigneesRaw.length ? assigneesRaw : undefined;
+  // Preserve timer fields
+  if (prev?.timeTracked !== undefined) next.timeTracked = prev.timeTracked;
+  if (prev?.timerStartedAt) next.timerStartedAt = prev.timerStartedAt;
   if (prev) {
     if (prev.status !== "DONE" && next.status === "DONE") {
       next.completedAt = now;
@@ -507,6 +521,45 @@ export async function todoProcess(
   }
 
   return { created, updated };
+}
+
+export async function toggleTimer(form: FormData): Promise<void> {
+  const user = await requireSession();
+  const id = String(form.get("id") ?? "");
+  if (!id) return;
+  const doc = await getActions();
+  const idx = doc.items.findIndex((x) => x.id === id);
+  if (idx < 0) return;
+  const cur = doc.items[idx];
+  const now = new Date().toISOString();
+
+  if (cur.timerStartedAt) {
+    const elapsed = Math.max(0, Math.floor((Date.now() - new Date(cur.timerStartedAt).getTime()) / 1000));
+    const total = (cur.timeTracked || 0) + elapsed;
+    doc.items[idx] = {
+      ...cur,
+      timeTracked: total,
+      timerStartedAt: undefined,
+      updatedAt: now,
+      activity: [
+        ...(cur.activity || []),
+        makeActivity(user, "timer_stopped", `+${formatTrackedTime(elapsed)} (total ${formatTrackedTime(total)})`, now),
+      ],
+    };
+  } else {
+    doc.items[idx] = {
+      ...cur,
+      timerStartedAt: now,
+      updatedAt: now,
+      activity: [
+        ...(cur.activity || []),
+        makeActivity(user, "timer_started", undefined, now),
+      ],
+    };
+  }
+
+  await saveActions(doc, user, `timer #${id}`);
+  revalidateAll();
 }
 
 export async function chatWithTodoBot(

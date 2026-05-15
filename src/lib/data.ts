@@ -36,6 +36,8 @@ export {
   cycleDays,
   isAging,
   relativeTime,
+  deadlineUrgency,
+  formatTrackedTime,
 } from "./types";
 
 const LOCAL_PATH = path.join(process.cwd(), "data", "actions.json");
@@ -82,6 +84,12 @@ export function normalizeItem(
   if (raw.comments !== undefined) base.comments = raw.comments;
   if (raw.updates !== undefined) base.updates = raw.updates;
   if (raw.activity !== undefined) base.activity = raw.activity;
+  // Deadline & collaboration extensions
+  if (raw.claimBy) base.claimBy = raw.claimBy as string;
+  if (raw.assignees) base.assignees = raw.assignees as string[];
+  if (raw.holdNote) base.holdNote = raw.holdNote as string;
+  if (raw.timeTracked !== undefined) base.timeTracked = raw.timeTracked as number;
+  if (raw.timerStartedAt) base.timerStartedAt = raw.timerStartedAt as string;
   return base;
 }
 
