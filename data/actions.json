@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-15T13:30:50.992Z",
+  "updatedAt": "2026-05-16T11:39:22.040Z",
   "items": [
     {
       "id": "1",
@@ -519,6 +519,35 @@
       "assignees": [
         "Zaal"
       ]
+    },
+    {
+      "id": "23",
+      "title": "IMan $70 Weekly supply",
+      "createdBy": "iman",
+      "owner": "Zaal",
+      "status": "TODO",
+      "category": "Ops",
+      "priority": "P1",
+      "important": false,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "2026-05-16",
+      "notes": "",
+      "createdAt": "2026-05-16T11:39:22.039Z",
+      "updatedAt": "2026-05-16T11:39:22.039Z",
+      "claimable": false,
+      "activity": [
+        {
+          "id": "a-1778931562040-cikb",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "created",
+          "createdAt": "2026-05-16T11:39:22.039Z"
+        }
+      ]
     }
-  ]
+  ],
+  "recurringDefs": []
 }
