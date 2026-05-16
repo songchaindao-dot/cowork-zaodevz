@@ -14,9 +14,15 @@ export default async function Page() {
   if (!user) redirect("/login");
   const doc = await getActions();
 
-  const portalItems = doc.items.filter((x) =>
-    DEV_CATEGORIES.includes(String(x.category)),
-  );
+  const allPortalItems = doc.items.filter((x) => DEV_CATEGORIES.includes(String(x.category)));
+  const portalItems = allPortalItems.filter((x) => {
+    const o = String(x.owner).toLowerCase();
+    const inAssignees = Array.isArray(x.assignees) && x.assignees.some((a) => a.toLowerCase() === user);
+    const isOpen = x.claimable || o === "open";
+    if (user === "zaal") return o === "zaal" || o === "both" || inAssignees || isOpen;
+    if (user === "iman") return o === "iman" || o === "both" || inAssignees || isOpen;
+    return o === user || inAssignees || isOpen;
+  });
 
   const open = portalItems.filter((x) => x.status !== "DONE");
   const wipMine = portalItems.filter(

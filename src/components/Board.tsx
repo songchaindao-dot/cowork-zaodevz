@@ -6,8 +6,6 @@ import {
   STATUSES,
   PRIORITIES,
   PHASES,
-  CATEGORIES,
-  OWNERS,
   ageDays,
   cycleDays,
   deadlineUrgency,
@@ -76,11 +74,9 @@ function ownerInitial(o: string): string {
 
 type Filters = {
   search: string;
-  owner: string;
   category: string;
   priority: string;
   phase: string;
-  mineOnly: boolean;
   agingOnly: boolean;
   reviewsOnly: boolean;
   dueSoon: boolean;
@@ -88,11 +84,9 @@ type Filters = {
 
 const EMPTY_FILTERS: Filters = {
   search: "",
-  owner: "",
   category: "",
   priority: "",
   phase: "",
-  mineOnly: true,
   agingOnly: false,
   reviewsOnly: false,
   dueSoon: false,
@@ -264,18 +258,9 @@ export function Board({
         const hay = `${it.title} ${it.notes} ${it.category} ${it.owner}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
-      if (filters.owner && it.owner !== filters.owner) return false;
       if (filters.category && it.category !== filters.category) return false;
       if (filters.priority && it.priority !== filters.priority) return false;
       if (filters.phase && it.phase !== filters.phase) return false;
-      if (filters.mineOnly) {
-        const mine = currentUser.toLowerCase();
-        const o = String(it.owner).toLowerCase();
-        const isOpenTask = it.claimable || o === "open";
-        const iCreated = String(it.createdBy || "").toLowerCase() === mine;
-        const isAssigned = (it.assignees || []).some((a) => a.toLowerCase() === mine);
-        if (o !== mine && o !== "both" && !isOpenTask && !iCreated && !isAssigned) return false;
-      }
       if (filters.agingOnly && it.status !== "DONE") {
         if (ageDays(it.createdAt) <= 14) return false;
       } else if (filters.agingOnly && it.status === "DONE") {
@@ -318,11 +303,9 @@ export function Board({
   const isWorker = currentUser.trim().toLowerCase() === "thyrev";
   const filtersActive =
     filters.search ||
-    filters.owner ||
     filters.category ||
     filters.priority ||
     filters.phase ||
-    filters.mineOnly ||
     filters.agingOnly ||
     filters.reviewsOnly ||
     filters.dueSoon;
@@ -382,7 +365,7 @@ export function Board({
         <div className="text-xs text-white/50">
           showing {filtered.length} of {items.length} items
           <button
-            onClick={() => setFilters({ ...EMPTY_FILTERS, mineOnly: true })}
+            onClick={() => setFilters(EMPTY_FILTERS)}
             className="ml-3 underline hover:text-white/80"
           >
             clear filters
@@ -489,7 +472,6 @@ function FilterBar({
   onOpenTask: (id: string) => void;
 }) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch });
-  const me = currentUser.charAt(0).toUpperCase() + currentUser.slice(1);
   const reviewCount = items.reduce(
     (n, it) => n + (it.updates || []).filter((u) => u.reviewStatus === "pending").length,
     0,
@@ -500,7 +482,7 @@ function FilterBar({
         <input
           value={filters.search}
           onChange={(e) => set({ search: e.target.value })}
-          placeholder="Search title, notes, owner..."
+          placeholder="Search tasks..."
           className="flex-1 rounded-xl bg-[#0b1220] border border-white/10 px-3 py-2 text-sm placeholder-white/30 focus:outline-none focus:border-zao-accent text-white"
         />
         <NotificationBell items={items} currentUser={currentUser} isLeadUser={isLeadUser} onOpenTask={onOpenTask} />
@@ -514,11 +496,6 @@ function FilterBar({
         </button>
       </div>
       <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" style={{ scrollbarWidth: "none" }}>
-        <Pill
-          active={filters.mineOnly}
-          onClick={() => set({ mineOnly: !filters.mineOnly })}
-          label={filters.mineOnly ? `My Tasks` : `All Tasks`}
-        />
         <Pill
           active={filters.agingOnly}
           onClick={() => set({ agingOnly: !filters.agingOnly })}
@@ -540,12 +517,6 @@ function FilterBar({
           tone="red"
         />
         <Divider />
-        <SelectPill
-          value={filters.owner}
-          onChange={(v) => set({ owner: v })}
-          options={["", ...OWNERS]}
-          placeholder="Owner"
-        />
         <SelectPill
           value={filters.category}
           onChange={(v) => set({ category: v })}
