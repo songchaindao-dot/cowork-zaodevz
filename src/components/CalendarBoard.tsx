@@ -35,6 +35,7 @@ import {
   toggleRecurringDef,
   triggerSpawn,
 } from "@/app/actions";
+import { UserPicker, usersToAssignment, assignmentToUsers } from "@/components/UserPicker";
 
 // ── Type definitions ───────────────────────────────────────────────────────
 
@@ -60,7 +61,7 @@ type TaskFormState = {
   category: string;
   priority: Priority;
   status: ActionStatus;
-  owner: string;
+  users: string[];   // multi-user selection → mapped to owner + assignees on submit
   due: string;
   notes: string;
 };
@@ -136,15 +137,17 @@ function statusStyle(s: ActionStatus): string {
   return "text-white/40 bg-white/5 border-white/10";
 }
 
-function ownerDefault(user: string): string {
-  const map: Record<string, string> = { zaal: "Zaal", iman: "Iman", thyrev: "ThyRev" };
-  return map[user] || "Open";
+function defaultUsersForCurrentUser(user: string): string[] {
+  if (user === "zaal") return ["Zaal"];
+  if (user === "iman") return ["Iman"];
+  if (user === "thyrev") return ["ThyRev"];
+  return [];
 }
 
 function emptyTaskForm(due: string, user: string): TaskFormState {
   return {
     title: "", category: "Ops", priority: "P2", status: "TODO",
-    owner: ownerDefault(user), due, notes: "",
+    users: defaultUsersForCurrentUser(user), due, notes: "",
   };
 }
 
@@ -303,22 +306,14 @@ function CreateTaskModal({
             </div>
           </div>
 
-          {/* Owner (leads can change, others see their name) */}
+          {/* Assigned to — multi-user picker */}
           <div>
-            <label className="block text-xs text-white/50 mb-1">Owner</label>
-            {lead ? (
-              <select
-                value={form.owner}
-                onChange={(e) => set("owner", e.target.value)}
-                className="w-full rounded-lg bg-[#0b1220] border border-white/[0.1] px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
-              >
-                {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-            ) : (
-              <div className="rounded-lg bg-[#0b1220] border border-white/[0.06] px-3 py-2 text-sm text-white/50">
-                {form.owner}
-              </div>
-            )}
+            <UserPicker
+              value={form.users}
+              onChange={(users) => set("users", users)}
+              disabled={pending}
+              label="Assigned to"
+            />
           </div>
 
           {/* Notes */}
@@ -603,12 +598,14 @@ export function CalendarBoard({
 
   function handleSaveTask() {
     if (!taskForm) return;
+    const { owner, assignees } = usersToAssignment(taskForm.users);
     const fd = new FormData();
     fd.append("title", taskForm.title);
     fd.append("category", taskForm.category);
     fd.append("priority", taskForm.priority);
     fd.append("status", taskForm.status);
-    fd.append("owner", taskForm.owner);
+    fd.append("owner", owner);
+    assignees.forEach((a) => fd.append("assignees", a));
     fd.append("due", taskForm.due);
     fd.append("notes", taskForm.notes);
     fd.append("important", "false");

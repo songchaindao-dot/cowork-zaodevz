@@ -14,7 +14,6 @@ import {
   STATUSES,
   PRIORITIES,
   PHASES,
-  OWNERS,
   CATEGORIES,
   TASK_TYPES,
   TASK_TYPE_LABELS,
@@ -23,8 +22,7 @@ import {
   formatTrackedTime,
 } from "@/lib/types";
 import { updateItem, addComment, submitUpdate, reviewUpdate, deleteItem, toggleTimer } from "@/app/actions";
-
-const ALL_ASSIGNEES = ["Zaal", "Iman", "ThyRev"];
+import { UserPicker, usersToAssignment, assignmentToUsers } from "@/components/UserPicker";
 
 const STATUS_LABEL: Record<ActionStatus, string> = {
   TODO: "TO DO",
@@ -209,9 +207,17 @@ function DetailsPanel({
   const [pending, start] = useTransition();
   const [flash, setFlash] = useState<"saved" | null>(null);
   const [watchedStatus, setWatchedStatus] = useState<ActionStatus>(item.status);
+  const [assignedUsers, setAssignedUsers] = useState<string[]>(() =>
+    assignmentToUsers(String(item.owner), item.assignees),
+  );
 
   function handleSave(fd: FormData) {
     fd.set("id", item.id);
+    // Inject multi-user assignment from state (hidden inputs not used here)
+    const { owner, assignees } = usersToAssignment(assignedUsers);
+    fd.set("owner", owner);
+    fd.delete("assignees");
+    assignees.forEach((a) => fd.append("assignees", a));
     start(async () => {
       await updateItem(fd);
       setFlash("saved");
@@ -234,6 +240,14 @@ function DetailsPanel({
           />
         </div>
 
+        {/* Multi-user assignment */}
+        <UserPicker
+          value={assignedUsers}
+          onChange={setAssignedUsers}
+          disabled={pending}
+          label="Assigned to"
+        />
+
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
             <select
@@ -252,14 +266,6 @@ function DetailsPanel({
             <select name="priority" defaultValue={item.priority} className={selectCls}>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </FormField>
-
-          <FormField label="Owner">
-            <select name="owner" defaultValue={String(item.owner)} className={selectCls}>
-              {OWNERS.map((o) => (
-                <option key={o} value={o}>{o}</option>
               ))}
             </select>
           </FormField>
@@ -315,31 +321,6 @@ function DetailsPanel({
               <input type="checkbox" name="urgent" defaultChecked={item.urgent} className="h-4 w-4 rounded" />
               <span className="text-sm text-white/75">Urgent</span>
             </label>
-          </div>
-        </div>
-
-        {/* Multi-user tagging */}
-        <div>
-          <label className="block text-[11px] text-white/45 mb-2 uppercase tracking-wider">
-            Tag Users (additional assignees)
-          </label>
-          <div className="flex gap-3 flex-wrap">
-            {ALL_ASSIGNEES.map((u) => {
-              const checked = (item.assignees || []).includes(u);
-              const color = u === "Zaal" ? "blue" : u === "Iman" ? "purple" : "emerald";
-              return (
-                <label key={u} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    name="assignees"
-                    value={u}
-                    defaultChecked={checked}
-                    className="h-4 w-4 rounded"
-                  />
-                  <span className={`text-sm text-${color}-300`}>{u}</span>
-                </label>
-              );
-            })}
           </div>
         </div>
 

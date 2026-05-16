@@ -13,13 +13,13 @@ import {
   deadlineUrgency,
   type ActionItem,
   type ActionStatus,
-  type Owner,
   type Priority,
 } from "@/lib/types";
 import { quickCreate, patchField, claimTask } from "@/app/actions";
 import { TaskRoom } from "./TaskRoom";
 import { TodoPanel, TodoTrigger } from "./TodoPanel";
 import { NotificationBell } from "./NotificationBell";
+import { UserPicker, usersToAssignment } from "./UserPicker";
 
 const STATUS_LABEL: Record<ActionStatus, string> = {
   TODO: "TO DO",
@@ -698,24 +698,26 @@ function QuickAddForm({
   isWorker: boolean;
 }) {
   const [pending, start] = useTransition();
-  const defaultOwner = ((): Owner => {
+  const defaultUsers = ((): string[] => {
     const me = currentUser.trim().toLowerCase();
-    if (me === "zaal") return "Zaal";
-    if (me === "iman") return "Iman";
-    if (me === "thyrev") return "ThyRev";
-    return "Open";
+    if (me === "zaal") return ["Zaal"];
+    if (me === "iman") return ["Iman"];
+    if (me === "thyrev") return ["ThyRev"];
+    return [];
   })();
   const [important, setImportant] = useState(false);
   const [urgent, setUrgent] = useState(false);
   const [priority, setPriority] = useState<Priority>("P2");
-  const [owner, setOwner] = useState<Owner>(defaultOwner);
+  const [assignedUsers, setAssignedUsers] = useState<string[]>(defaultUsers);
 
   return (
     <form
       action={(fd) => {
         fd.set("status", status);
         if (!fd.get("category")) fd.set("category", defaultCategory);
+        const { owner, assignees } = usersToAssignment(assignedUsers);
         fd.set("owner", owner);
+        assignees.forEach((a) => fd.append("assignees", a));
         fd.set("priority", priority);
         if (important) fd.set("important", "1");
         if (urgent) fd.set("urgent", "1");
@@ -727,7 +729,7 @@ function QuickAddForm({
         setImportant(false);
         setUrgent(false);
         setPriority("P2");
-        setOwner(defaultOwner);
+        setAssignedUsers(defaultUsers);
       }}
       className="rounded-xl bg-black/20 border border-white/10 p-2"
     >
@@ -740,19 +742,14 @@ function QuickAddForm({
           disabled={pending}
           required
         />
-        <select
-          value={owner}
-          onChange={(e) => setOwner(e.target.value as Owner)}
-          className="col-span-7 sm:col-span-5 lg:col-span-2 rounded-lg bg-[#0b1220] border border-white/10 px-2 py-2 text-sm text-white/80"
-          disabled={pending}
-          aria-label="Responsible"
-        >
-          {OWNERS.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
+        <div className="col-span-7 sm:col-span-5 lg:col-span-2 flex items-center">
+          <UserPicker
+            value={assignedUsers}
+            onChange={setAssignedUsers}
+            disabled={pending}
+            compact
+          />
+        </div>
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value as Priority)}
