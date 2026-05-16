@@ -15,7 +15,6 @@ import {
   recurrenceDescription,
   deadlineUrgency,
   CATEGORIES,
-  OWNERS,
   PRIORITIES,
   PHASES,
   STATUSES,
@@ -36,6 +35,7 @@ import {
   triggerSpawn,
 } from "@/app/actions";
 import { UserPicker, usersToAssignment, assignmentToUsers } from "@/components/UserPicker";
+import { TaskRoom } from "@/components/TaskRoom";
 
 // ── Type definitions ───────────────────────────────────────────────────────
 
@@ -44,7 +44,7 @@ type DefFormState = {
   title: string;
   category: string;
   priority: Priority;
-  owner: string;
+  users: string[];
   recurrence: RecurrenceType;
   daysOfWeek: number[];
   dayOfMonth: number;
@@ -70,7 +70,7 @@ type TaskFormState = {
 
 function emptyDefForm(): DefFormState {
   return {
-    title: "", category: "Ops", priority: "P2", owner: "Both",
+    title: "", category: "Ops", priority: "P2", users: ["Zaal", "Iman"],
     recurrence: "weekly", daysOfWeek: [1], dayOfMonth: 1,
     yearlyMonth: 1, yearlyDay: 1, notes: "", phase: "Define",
     requiresApproval: false, active: true,
@@ -80,7 +80,7 @@ function emptyDefForm(): DefFormState {
 function defToForm(def: RecurringTaskDef): DefFormState {
   return {
     id: def.id, title: def.title, category: String(def.category),
-    priority: def.priority, owner: String(def.owner), recurrence: def.recurrence,
+    priority: def.priority, users: assignmentToUsers(String(def.owner)), recurrence: def.recurrence,
     daysOfWeek: def.daysOfWeek?.length ? def.daysOfWeek : [1],
     dayOfMonth: def.dayOfMonth || 1, yearlyMonth: def.yearlyMonth || 1,
     yearlyDay: def.yearlyDay || 1, notes: def.notes || "", phase: def.phase || "Define",
@@ -92,7 +92,8 @@ function defFormToFD(s: DefFormState): FormData {
   const fd = new FormData();
   if (s.id) fd.append("id", s.id);
   fd.append("title", s.title); fd.append("category", s.category);
-  fd.append("priority", s.priority); fd.append("owner", s.owner);
+  const { owner } = usersToAssignment(s.users);
+  fd.append("priority", s.priority); fd.append("owner", owner);
   fd.append("recurrence", s.recurrence);
   if (s.recurrence === "weekly") s.daysOfWeek.forEach((d) => fd.append("daysOfWeek", String(d)));
   if (s.recurrence === "monthly") fd.append("dayOfMonth", String(s.dayOfMonth));
@@ -164,7 +165,7 @@ function isOverdue(due: string, today: string): boolean {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function CalTaskCard({ item, today }: { item: ActionItem; today: string }) {
+function CalTaskCard({ item, today, onOpen }: { item: ActionItem; today: string; onOpen: (id: string) => void }) {
   const overdue = isOverdue(item.due, today);
   const urgency = deadlineUrgency(item.due);
   const dueCls =
@@ -173,7 +174,11 @@ function CalTaskCard({ item, today }: { item: ActionItem; today: string }) {
     urgency === "soon" ? "text-amber-400" : "text-white/35";
 
   return (
-    <div className="flex items-start gap-3 rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 hover:bg-white/[0.06] transition-colors">
+    <button
+      type="button"
+      onClick={() => onOpen(item.id)}
+      className="w-full text-left flex items-start gap-3 rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 hover:bg-white/[0.08] hover:border-white/[0.15] transition-colors cursor-pointer"
+    >
       <span className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${priorityDot(item.priority)}`} />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-white/90 truncate leading-snug">{item.title}</p>
@@ -190,7 +195,8 @@ function CalTaskCard({ item, today }: { item: ActionItem; today: string }) {
           )}
         </div>
       </div>
-    </div>
+      <span className="text-[10px] text-white/25 flex-shrink-0 mt-1">open →</span>
+    </button>
   );
 }
 
@@ -395,22 +401,20 @@ function DefFormModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-white/50 mb-1">Category</label>
-              <select value={form.category} onChange={(e) => set("category", e.target.value)}
-                className="w-full rounded-lg bg-[#0b1220] border border-white/[0.1] px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50">
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-white/50 mb-1">Owner</label>
-              <select value={form.owner} onChange={(e) => set("owner", e.target.value)}
-                className="w-full rounded-lg bg-[#0b1220] border border-white/[0.1] px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50">
-                {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs text-white/50 mb-1">Category</label>
+            <select value={form.category} onChange={(e) => set("category", e.target.value)}
+              className="w-full rounded-lg bg-[#0b1220] border border-white/[0.1] px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/50">
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
+
+          <UserPicker
+            value={form.users}
+            onChange={(users) => set("users", users)}
+            disabled={pending}
+            label="Assign to"
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -544,6 +548,7 @@ export function CalendarBoard({
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [defForm, setDefForm] = useState<DefFormState | null>(null);
   const [taskForm, setTaskForm] = useState<TaskFormState | null>(null);
+  const [taskRoomId, setTaskRoomId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -807,7 +812,7 @@ export function CalendarBoard({
                   <p className="text-[10px] uppercase tracking-wider text-white/30 mb-2">Your Tasks</p>
                   <div className="space-y-2">
                     {selectedDayTasks.map((item) => (
-                      <CalTaskCard key={item.id} item={item} today={todayStr} />
+                      <CalTaskCard key={item.id} item={item} today={todayStr} onOpen={setTaskRoomId} />
                     ))}
                   </div>
                 </div>
@@ -908,11 +913,16 @@ export function CalendarBoard({
                     </p>
                     <div className="space-y-1.5 pl-3 border-l border-white/[0.06]">
                       {dayTasks.map((t) => (
-                        <div key={t.id} className="flex items-center gap-2">
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setTaskRoomId(t.id)}
+                          className="w-full flex items-center gap-2 hover:bg-white/[0.04] rounded-lg px-1 py-0.5 -mx-1 transition-colors"
+                        >
                           <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${priorityDot(t.priority)}`} />
-                          <span className="text-xs text-white/70 truncate">{t.title}</span>
+                          <span className="text-xs text-white/70 truncate text-left">{t.title}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded border ml-auto flex-shrink-0 ${statusStyle(t.status)}`}>{t.status}</span>
-                        </div>
+                        </button>
                       ))}
                       {daySpawns.map((def) => (
                         <div key={def.id} className="flex items-center gap-2">
@@ -1019,6 +1029,13 @@ export function CalendarBoard({
           pending={pending}
         />
       )}
+
+      {taskRoomId && (() => {
+        const item = myTasks.find((x) => x.id === taskRoomId);
+        return item ? (
+          <TaskRoom item={item} currentUser={currentUser} onClose={() => setTaskRoomId(null)} />
+        ) : null;
+      })()}
     </div>
   );
 }

@@ -19,7 +19,7 @@ import { quickCreate, patchField, claimTask } from "@/app/actions";
 import { TaskRoom } from "./TaskRoom";
 import { TodoPanel, TodoTrigger } from "./TodoPanel";
 import { NotificationBell } from "./NotificationBell";
-import { UserPicker, usersToAssignment } from "./UserPicker";
+import { USER_CONFIG, usersToAssignment } from "./UserPicker";
 
 const STATUS_LABEL: Record<ActionStatus, string> = {
   TODO: "TO DO",
@@ -686,6 +686,82 @@ function Column({
   );
 }
 
+function UserDropdown({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string[];
+  onChange: (u: string[]) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  const label =
+    value.length === 0 ? "Open"
+    : value.length === 1 ? value[0]
+    : value.map((u) => u.slice(0, 1)).join("+");
+
+  const toggle = (key: string) =>
+    onChange(value.includes(key) ? value.filter((u) => u !== key) : [...value, key]);
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((o) => !o)}
+        className="w-full rounded-lg bg-[#0b1220] border border-white/10 px-2.5 py-2 text-sm text-white/80 text-left flex items-center justify-between gap-1 disabled:opacity-50 hover:border-white/20 transition-colors"
+      >
+        <span className="truncate text-xs">{label}</span>
+        <span className="text-white/35 text-[10px] flex-shrink-0">▾</span>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-30 rounded-xl bg-[#0b1220] border border-white/[0.15] shadow-2xl py-1.5 min-w-[140px]">
+          {USER_CONFIG.map(({ key, initial, avatarActive, avatarInactive }) => {
+            const active = value.includes(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggle(key)}
+                className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-white/[0.06] transition-colors"
+              >
+                <span className={`h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${active ? avatarActive : avatarInactive}`}>
+                  {initial}
+                </span>
+                <span className={`text-sm ${active ? "text-white" : "text-white/50"}`}>{key}</span>
+                {active && <span className="ml-auto text-[10px] text-white/40">✓</span>}
+              </button>
+            );
+          })}
+          {value.length > 0 && (
+            <div className="border-t border-white/[0.07] mt-1 pt-1">
+              <button
+                type="button"
+                onClick={() => { onChange([]); setOpen(false); }}
+                className="w-full text-left px-3 py-1 text-xs text-white/30 hover:text-white/60 transition-colors"
+              >
+                Clear (Open)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QuickAddForm({
   status,
   currentUser,
@@ -742,12 +818,11 @@ function QuickAddForm({
           disabled={pending}
           required
         />
-        <div className="col-span-7 sm:col-span-5 lg:col-span-2 flex items-center">
-          <UserPicker
+        <div className="col-span-7 sm:col-span-5 lg:col-span-2">
+          <UserDropdown
             value={assignedUsers}
             onChange={setAssignedUsers}
             disabled={pending}
-            compact
           />
         </div>
         <select
