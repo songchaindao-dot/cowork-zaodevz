@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-16T11:39:22.040Z",
+  "updatedAt": "2026-05-16T11:46:37.008Z",
   "items": [
     {
       "id": "1",
@@ -545,6 +545,34 @@
           "displayName": "Iman",
           "action": "created",
           "createdAt": "2026-05-16T11:39:22.039Z"
+        }
+      ]
+    },
+    {
+      "id": "24",
+      "title": "$150 Rent Bill",
+      "createdBy": "iman",
+      "owner": "Both",
+      "status": "TODO",
+      "category": "Ops",
+      "priority": "P1",
+      "important": false,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "2026-06-06",
+      "notes": "",
+      "createdAt": "2026-05-16T11:46:37.007Z",
+      "updatedAt": "2026-05-16T11:46:37.007Z",
+      "claimable": false,
+      "activity": [
+        {
+          "id": "a-1778931997007-za98",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "created",
+          "createdAt": "2026-05-16T11:46:37.007Z"
         }
       ]
     }
