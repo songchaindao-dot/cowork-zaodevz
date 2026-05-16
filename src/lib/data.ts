@@ -7,6 +7,7 @@ import type {
   Phase,
   Priority,
   TaskType,
+  RecurringTaskDef,
 } from "./types";
 
 export type {
@@ -22,6 +23,8 @@ export type {
   Comment,
   TaskUpdate,
   ActivityEvent,
+  RecurringTaskDef,
+  RecurrenceType,
 } from "./types";
 
 export {
@@ -32,12 +35,19 @@ export {
   OWNERS,
   TASK_TYPES,
   TASK_TYPE_LABELS,
+  RECURRENCE_TYPES,
+  RECURRENCE_LABELS,
+  DAY_NAMES_SHORT,
+  MONTH_NAMES_FULL,
   ageDays,
   cycleDays,
   isAging,
   relativeTime,
   deadlineUrgency,
   formatTrackedTime,
+  computeNextRun,
+  getSpawnsInRange,
+  recurrenceDescription,
 } from "./types";
 
 const LOCAL_PATH = path.join(process.cwd(), "data", "actions.json");
@@ -90,6 +100,7 @@ export function normalizeItem(
   if (raw.holdNote) base.holdNote = raw.holdNote as string;
   if (raw.timeTracked !== undefined) base.timeTracked = raw.timeTracked as number;
   if (raw.timerStartedAt) base.timerStartedAt = raw.timerStartedAt as string;
+  if (raw.recurringDefId) base.recurringDefId = raw.recurringDefId as string;
   return base;
 }
 
@@ -97,6 +108,7 @@ function normalizeDoc(doc: ActionDoc): ActionDoc {
   return {
     updatedAt: doc.updatedAt || nowIso(),
     items: (doc.items || []).map((it) => normalizeItem(it as ActionItem)),
+    recurringDefs: (doc.recurringDefs || []) as RecurringTaskDef[],
   };
 }
 

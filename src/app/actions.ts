@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { destroySession, requireSession, isLead } from "@/lib/auth";
 import { type ParsedAction } from "@/lib/todo-parser";
+import { spawnDueTasks } from "@/lib/spawn";
 import {
   getActions,
   saveActions,
   newId,
   normalizeItem,
   formatTrackedTime,
+  computeNextRun,
   type ActionItem,
   type ActionStatus,
   type Priority,
@@ -19,11 +21,14 @@ import {
   type TaskUpdate,
   type ActivityEvent,
   type ReviewStatus,
+  type RecurringTaskDef,
+  type RecurrenceType,
   STATUSES,
   PRIORITIES,
   PHASES,
   CATEGORIES,
   TASK_TYPES,
+  RECURRENCE_TYPES,
 } from "@/lib/data";
 
 function asStatus(v: unknown): ActionStatus {
@@ -132,6 +137,7 @@ function revalidateAll() {
   revalidatePath("/");
   revalidatePath("/music");
   revalidatePath("/marketing");
+  revalidatePath("/calendar");
 }
 
 export async function createItem(form: FormData): Promise<void> {
@@ -690,6 +696,125 @@ export async function claimTask(form: FormData): Promise<void> {
   };
   await saveActions(doc, user, `claim #${id} by ${user}`);
   revalidateAll();
+}
+
+// ─── Zao Calendar — recurring task definitions ───────────────────────────────
+
+function asRecurrenceType(v: unknown): RecurrenceType {
+  return RECURRENCE_TYPES.includes(v as RecurrenceType) ? (v as RecurrenceType) : "weekly";
+}
+
+function readRecurringDefForm(
+  form: FormData,
+  id: string,
+  actor: string,
+  prev?: RecurringTaskDef,
+): RecurringTaskDef {
+  const now = new Date().toISOString();
+  const recurrence = asRecurrenceType(form.get("recurrence") ?? prev?.recurrence);
+  const daysOfWeekRaw = form.getAll("daysOfWeek").map(Number).filter((n) => !isNaN(n) && n >= 0 && n <= 6);
+  const dayOfMonth = Math.min(31, Math.max(1, Number(form.get("dayOfMonth") ?? prev?.dayOfMonth ?? 1)));
+  const yearlyMonth = Math.min(12, Math.max(1, Number(form.get("yearlyMonth") ?? prev?.yearlyMonth ?? 1)));
+  const yearlyDay = Math.min(31, Math.max(1, Number(form.get("yearlyDay") ?? prev?.yearlyDay ?? 1)));
+  const active = asBool(form.get("active") ?? prev?.active ?? true);
+
+  // Build partial first so computeNextRun can read recurrence fields
+  const partial = {
+    id,
+    title: String(form.get("title") ?? prev?.title ?? "").trim(),
+    category: asCategory(form.get("category") ?? prev?.category),
+    priority: asPriority(form.get("priority") ?? prev?.priority),
+    owner: String(form.get("owner") ?? prev?.owner ?? "Both").trim(),
+    notes: String(form.get("notes") ?? prev?.notes ?? "").trim() || undefined,
+    recurrence,
+    daysOfWeek: recurrence === "weekly" ? (daysOfWeekRaw.length ? daysOfWeekRaw : [1]) : undefined,
+    dayOfMonth: recurrence === "monthly" ? dayOfMonth : undefined,
+    yearlyMonth: recurrence === "yearly" ? yearlyMonth : undefined,
+    yearlyDay: recurrence === "yearly" ? yearlyDay : undefined,
+    spawnedCount: prev?.spawnedCount ?? 0,
+    createdBy: prev?.createdBy || actor,
+    createdAt: prev?.createdAt || now,
+    active,
+    phase: form.get("phase") ? asPhase(form.get("phase")) : prev?.phase,
+    taskType: asTaskType(form.get("taskType")) ?? prev?.taskType,
+    requiresApproval:
+      form.get("_hasRequiresApproval") === "1"
+        ? asBool(form.get("requiresApproval"))
+        : prev?.requiresApproval,
+    lastRun: prev?.lastRun,
+  };
+
+  const nextRun = prev?.nextRun || computeNextRun(partial as RecurringTaskDef, new Date(Date.now() - 86400000));
+  const draft: RecurringTaskDef = { ...partial, nextRun };
+
+  return draft;
+}
+
+export async function createRecurringDef(form: FormData): Promise<void> {
+  const user = await requireSession();
+  if (!isLead(user)) return;
+  const doc = await getActions();
+  const existingIds = (doc.recurringDefs || []).map((d) => d.id);
+  const maxId = existingIds.reduce((m, id) => {
+    const n = parseInt(id.replace("r", ""), 10);
+    return Number.isFinite(n) && n > m ? n : m;
+  }, 0);
+  const id = `r${maxId + 1}`;
+  const def = readRecurringDefForm(form, id, user);
+  if (!def.title) return;
+  doc.recurringDefs = [...(doc.recurringDefs || []), def];
+  await saveActions(doc, user, `calendar: add recurring "${def.title}"`);
+  revalidateAll();
+}
+
+export async function updateRecurringDef(form: FormData): Promise<void> {
+  const user = await requireSession();
+  if (!isLead(user)) return;
+  const id = String(form.get("id") ?? "");
+  if (!id) return;
+  const doc = await getActions();
+  const defs = doc.recurringDefs || [];
+  const idx = defs.findIndex((d) => d.id === id);
+  if (idx < 0) return;
+  const updated = readRecurringDefForm(form, id, user, defs[idx]);
+  if (!updated.title) return;
+  defs[idx] = updated;
+  doc.recurringDefs = defs;
+  await saveActions(doc, user, `calendar: edit recurring "${updated.title}"`);
+  revalidateAll();
+}
+
+export async function deleteRecurringDef(form: FormData): Promise<void> {
+  const user = await requireSession();
+  if (!isLead(user)) return;
+  const id = String(form.get("id") ?? "");
+  if (!id) return;
+  const doc = await getActions();
+  doc.recurringDefs = (doc.recurringDefs || []).filter((d) => d.id !== id);
+  await saveActions(doc, user, `calendar: delete recurring ${id}`);
+  revalidateAll();
+}
+
+export async function toggleRecurringDef(form: FormData): Promise<void> {
+  const user = await requireSession();
+  if (!isLead(user)) return;
+  const id = String(form.get("id") ?? "");
+  if (!id) return;
+  const doc = await getActions();
+  const defs = doc.recurringDefs || [];
+  const idx = defs.findIndex((d) => d.id === id);
+  if (idx < 0) return;
+  defs[idx] = { ...defs[idx], active: !defs[idx].active };
+  doc.recurringDefs = defs;
+  await saveActions(doc, user, `calendar: toggle recurring ${id}`);
+  revalidateAll();
+}
+
+export async function triggerSpawn(): Promise<{ spawned: number }> {
+  const user = await requireSession();
+  if (!isLead(user)) return { spawned: 0 };
+  const count = await spawnDueTasks(user);
+  return { spawned: count };
 }
 
 export async function logout(): Promise<void> {

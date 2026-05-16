@@ -25,6 +25,13 @@ const PORTALS = [
     dot: "bg-amber-400",
     activeClass: "bg-amber-500/20 text-amber-200 border-amber-500/40",
   },
+  {
+    href: "/calendar",
+    label: "Calendar",
+    sub: "Recurring Tasks & Schedule",
+    dot: "bg-cyan-400",
+    activeClass: "bg-cyan-500/20 text-cyan-200 border-cyan-500/40",
+  },
 ];
 
 export function NavBar() {
