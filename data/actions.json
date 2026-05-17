@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-17T15:46:42.347Z",
+  "updatedAt": "2026-05-17T15:47:11.643Z",
   "items": [
     {
       "id": "1",
@@ -525,18 +525,20 @@
       "title": "IMan $70 Weekly supply",
       "createdBy": "iman",
       "owner": "Zaal",
-      "status": "TODO",
+      "status": "DONE",
       "category": "Ops",
       "priority": "P1",
       "important": false,
       "urgent": false,
-      "completedAt": "",
-      "completedBy": "",
+      "completedAt": "2026-05-17T15:47:11.643Z",
+      "completedBy": "zaal",
       "phase": "Define",
       "due": "2026-05-16",
       "notes": "",
       "createdAt": "2026-05-16T11:39:22.039Z",
-      "updatedAt": "2026-05-17T15:46:42.347Z",
+      "updatedAt": "2026-05-17T15:47:11.643Z",
+      "taskType": "task",
+      "requiresApproval": false,
       "claimable": false,
       "activity": [
         {
@@ -552,6 +554,14 @@
           "displayName": "Zaal",
           "action": "timer_started",
           "createdAt": "2026-05-17T15:46:42.347Z"
+        },
+        {
+          "id": "a-1779032831643-05yw",
+          "userId": "zaal",
+          "displayName": "Zaal",
+          "action": "status_changed",
+          "detail": "TODO → DONE",
+          "createdAt": "2026-05-17T15:47:11.643Z"
         }
       ],
       "timerStartedAt": "2026-05-17T15:46:42.347Z"
