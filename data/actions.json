@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-16T11:46:37.008Z",
+  "updatedAt": "2026-05-17T15:46:42.347Z",
   "items": [
     {
       "id": "1",
@@ -536,7 +536,7 @@
       "due": "2026-05-16",
       "notes": "",
       "createdAt": "2026-05-16T11:39:22.039Z",
-      "updatedAt": "2026-05-16T11:39:22.039Z",
+      "updatedAt": "2026-05-17T15:46:42.347Z",
       "claimable": false,
       "activity": [
         {
@@ -545,8 +545,16 @@
           "displayName": "Iman",
           "action": "created",
           "createdAt": "2026-05-16T11:39:22.039Z"
+        },
+        {
+          "id": "a-1779032802347-08qi",
+          "userId": "zaal",
+          "displayName": "Zaal",
+          "action": "timer_started",
+          "createdAt": "2026-05-17T15:46:42.347Z"
         }
-      ]
+      ],
+      "timerStartedAt": "2026-05-17T15:46:42.347Z"
     },
     {
       "id": "24",
