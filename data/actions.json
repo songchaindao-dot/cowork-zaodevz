@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-17T15:47:11.643Z",
+  "updatedAt": "2026-05-17T15:47:45.680Z",
   "items": [
     {
       "id": "1",
@@ -112,7 +112,7 @@
     {
       "id": "7",
       "title": "Set up imanagent on existing VPS",
-      "createdBy": "",
+      "createdBy": "zaal",
       "owner": "Zaal",
       "status": "TODO",
       "category": "Site / Tech",
@@ -122,10 +122,13 @@
       "completedAt": "",
       "completedBy": "",
       "phase": "Define",
-      "due": "After Phase 2",
+      "due": "2026-05-17",
       "notes": "See BACKLOG.md Phase 4. Hermes-style agent. Daily summary post + inbox watcher candidates.",
       "createdAt": "2026-05-06T00:00:00.000Z",
-      "updatedAt": "2026-05-06T00:00:00.000Z"
+      "updatedAt": "2026-05-17T15:47:45.680Z",
+      "taskType": "task",
+      "requiresApproval": false,
+      "claimable": false
     },
     {
       "id": "8",
