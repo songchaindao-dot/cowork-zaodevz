@@ -10,7 +10,17 @@ export async function callClaudeMax(req: LLMRequest): Promise<string> {
       '--model', req.model,
       '--print',
       '--append-system-prompt', req.system,
-      '--permission-mode', 'auto',
+      // v2.13 - was 'auto'. With no interactive operator, 'auto' surfaces
+      // permission prompts that time out, then the model narrates about them
+      // ("approve in the system dialog..."). 'dontAsk' auto-denies any tool
+      // not pre-approved, so there's no prompt event to narrate about.
+      '--permission-mode', 'dontAsk',
+      // v2.13 - bot is a chat-only concierge. It has zero use for Read/Edit/
+      // Write/Bash/etc. Removing them from the subprocess removes the surface
+      // the model was hallucinating about ("I need write permission to
+      // create data/actions.json"). Doc 671 fix 1c.
+      '--disallowedTools',
+      'Bash,Read,Write,Edit,WebFetch,WebSearch,Glob,Grep,Task,NotebookEdit',
     ];
     const proc = spawn('claude', args, { env: process.env, stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';

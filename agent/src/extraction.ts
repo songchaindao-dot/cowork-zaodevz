@@ -85,23 +85,27 @@ export async function clearPending(): Promise<void> {
   await fs.unlink(COWORK_PATHS.pending).catch(() => {});
 }
 
+// v2.13 - when a json-suggest block is present, the LLM's free-text portion is
+// pure narration. Doc 671 found this is the single biggest source of "approve
+// in the system dialog" / "I need write permission" hallucinations. Throw it
+// away and replace with a templated, short, deterministic preamble built from
+// the suggestion itself. The user gets clean output every time and the LLM's
+// prose can no longer leak fictional permission flows.
 export async function maybeStartSuggestionFlow(
   ctx: Context,
   botReply: string,
 ): Promise<string> {
   const suggestion = extractSuggestion(botReply);
   if (!suggestion) return botReply;
-  const stripped = stripSuggestionBlock(botReply);
   const chatId = ctx.chat?.id;
   const userId = ctx.from?.id;
-  if (!chatId || !userId) return stripped;
+  if (!chatId || !userId) return stripSuggestionBlock(botReply);
 
   // v2.11 - if user has auto_confirm on, skip the suggest-then-confirm step
   // and execute directly. Trade safety for speed; default off.
   if (await isAutoConfirm(userId)) {
     await executeSuggestion(ctx, suggestion);
-    const note = `\n\n(auto-confirmed: ${describeSuggestion(suggestion)})`;
-    return stripped + note;
+    return `done: ${describeSuggestion(suggestion)}`;
   }
 
   await savePending({
@@ -110,8 +114,7 @@ export async function maybeStartSuggestionFlow(
     suggestion,
     createdAt: new Date().toISOString(),
   });
-  const tail = `\n\nsuggested: ${describeSuggestion(suggestion)}\nreply "yes" to confirm or anything else to cancel\n(tip: /autoconfirm on to skip this step for future natural-language edits)`;
-  return stripped + tail;
+  return `suggested: ${describeSuggestion(suggestion)}\nreply "yes" to confirm or anything else to cancel\n(tip: /autoconfirm on - skip this step on future NL edits)`;
 }
 
 /**

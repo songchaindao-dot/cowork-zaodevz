@@ -5,7 +5,7 @@
 // /mymodel                         - show my current resolved provider/model/source
 // /providers                       - list available providers + how to set keys
 
-import { Context } from 'grammy';
+import { Context, InlineKeyboard } from 'grammy';
 import { PROVIDERS, DEFAULT_PROVIDER, DEFAULT_MODEL } from './llm';
 import {
   clearUserApiKey,
@@ -102,27 +102,74 @@ export async function cmdClearKey(ctx: Context, args: string): Promise<void> {
 // v2.11 - autoconfirm. When ON, natural-language mutations write immediately
 // instead of asking "reply yes to confirm". Slash commands always write
 // directly regardless of this setting.
+// v2.13 - bare /autoconfirm shows tap-to-toggle inline buttons (Iman feedback:
+// "It's not giving me the option to say on or off, it just tells me what it
+// does"). Also accept the alias "autonomy on/off" via the text handler.
 export async function cmdAutoConfirm(ctx: Context, args: string): Promise<void> {
   const id = tgId(ctx);
   if (!id) return;
   const arg = args.trim().toLowerCase();
-  if (arg === '') {
-    const current = await isAutoConfirm(id);
+  const current = await isAutoConfirm(id);
+
+  if (arg === 'on' || arg === 'off') {
+    const target = arg === 'on';
+    if (target === current) {
+      await ctx.reply(`already ${arg.toUpperCase()}.`);
+      return;
+    }
+    await setAutoConfirm(id, target);
     await ctx.reply(
-      `autoconfirm: ${current ? 'ON' : 'OFF'}\n\nWhen ON: natural-language requests like "set #24 due date to 2026-05-28" run immediately.\nWhen OFF (default): bot suggests + asks "yes" to confirm.\nSlash commands (/setdue, /done, etc) always run directly either way.\n\nusage: /autoconfirm on | off`,
+      target
+        ? 'autoconfirm ON. natural-language edits run immediately.'
+        : 'autoconfirm OFF. natural-language edits will ask "yes" to confirm first.',
     );
     return;
   }
-  if (arg !== 'on' && arg !== 'off') {
-    await ctx.reply('usage: /autoconfirm on | off');
+  if (arg !== '') {
+    await ctx.reply('usage: /autoconfirm on | off (or tap the buttons after typing /autoconfirm with no args)');
     return;
   }
-  await setAutoConfirm(id, arg === 'on');
+  // Bare /autoconfirm - show toggle buttons.
+  const kb = new InlineKeyboard()
+    .text(current ? '[ON - current]' : 'turn ON', 'ac:on')
+    .text(current ? 'turn OFF' : '[OFF - current]', 'ac:off');
   await ctx.reply(
-    arg === 'on'
-      ? 'autoconfirm ON. natural-language edits run immediately. use /autoconfirm off to undo.'
-      : 'autoconfirm OFF. natural-language edits will ask "yes" to confirm first.',
+    `autoconfirm is ${current ? 'ON' : 'OFF'}.\n\nON: natural-language edits like "set #24 due to 2026-05-28" run immediately.\nOFF: bot suggests + asks "yes" first.\nSlash commands (/setdue, /done, etc) always run direct.\n\ntap a button or type /autoconfirm on | off`,
+    { reply_markup: kb },
   );
+}
+
+// v2.13 - handle the inline-keyboard taps from the bare /autoconfirm screen.
+export async function handleAutoConfirmCallback(ctx: Context): Promise<boolean> {
+  const data = ctx.callbackQuery?.data;
+  if (data !== 'ac:on' && data !== 'ac:off') return false;
+  const id = tgId(ctx);
+  if (!id) {
+    await ctx.answerCallbackQuery('no user id').catch(() => {});
+    return true;
+  }
+  const target = data === 'ac:on';
+  await setAutoConfirm(id, target);
+  await ctx.answerCallbackQuery(target ? 'autoconfirm ON' : 'autoconfirm OFF').catch(() => {});
+  await ctx
+    .editMessageText(
+      target
+        ? 'autoconfirm ON. natural-language edits run immediately.\ntoggle anytime with /autoconfirm.'
+        : 'autoconfirm OFF. natural-language edits ask "yes" to confirm first.\ntoggle anytime with /autoconfirm.',
+    )
+    .catch(() => {});
+  return true;
+}
+
+// v2.13 - accept "autonomy on/off", "autoconfirm on/off", "auto on/off" as
+// natural-language aliases. Returns true if the message matched + was handled,
+// so the caller skips the LLM path.
+const AUTOCONFIRM_NL_RE = /^\s*(?:autoconfirm|autonomy|auto-confirm|auto)\s+(on|off)\s*$/i;
+export async function maybeHandleAutoConfirmNL(ctx: Context, text: string): Promise<boolean> {
+  const m = text.match(AUTOCONFIRM_NL_RE);
+  if (!m) return false;
+  await cmdAutoConfirm(ctx, m[1].toLowerCase());
+  return true;
 }
 
 export async function cmdProviders(ctx: Context): Promise<void> {
