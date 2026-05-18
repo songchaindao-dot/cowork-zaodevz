@@ -1,6 +1,8 @@
 // Bonfires integration types (Phase 1 per Doc 669).
 // Each action-tracker mutation emits a TeamEvent which the bonfire hook
-// converts to a kEngram changeset.
+// converts to a Bonfires episode (natural-language ingest; their auto-
+// extraction builds the KG). v0.3.1 dropped the kEngram changeset model
+// since the real API at /knowledge_graph/episode/create takes text bodies.
 
 import type { ActionItem, Owner, Priority, Phase } from '../types';
 
@@ -29,22 +31,7 @@ export interface TeamEvent {
   timestamp: string; // ISO UTC
 }
 
-// kEngram changeset shape per Doc 668d / Bonfires SDK contract.
-export interface BonfireNode {
-  uuid: 'auto' | string;
-  name: string;
-  summary?: string;
-  labels?: string[];
-}
-
-export interface BonfireEdge {
-  source: string;
-  target: string;
-  name: string;
-  fact?: string;
-}
-
-export interface BonfireChangeset {
-  nodes: BonfireNode[];
-  edges: BonfireEdge[];
-}
+// Legacy: BonfireNode/Edge/Changeset removed in v0.3.1. The Bonfires API
+// takes natural-language episodes (Doc 669 + verified endpoint), not
+// structured node+edge changesets. Their auto-extraction infers entities
+// and relationships from text. See bonfire.ts eventToEpisode().
