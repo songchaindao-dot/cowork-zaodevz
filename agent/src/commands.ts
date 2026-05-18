@@ -6,6 +6,7 @@
 import { Context } from 'grammy';
 import { fetchActions, makeActionItem, mutateActions } from './actions-store';
 import { notifyAssigned, notifyStatusChange } from './notifications';
+import { rosterView } from './roster';
 import type { ActionItem, ActionStatus, Owner, Priority } from './types';
 import { OWNERS } from './types';
 
@@ -30,9 +31,27 @@ function parseUserNames(env: string | undefined): UserNameMap {
 const USER_NAMES = parseUserNames(process.env.USER_NAMES);
 const ADMIN_IDS = new Set((process.env.ADMIN_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean));
 
-function ownerForCtx(ctx: Context): Owner {
-  const id = String(ctx.from?.id ?? '');
-  return USER_NAMES[id] ?? 'Open';
+// v2.15 - was only reading USER_NAMES env, which is stale on most installs
+// (Iman not in env -> new items got owner=Open even when Iman created them).
+// Now consults the roster first (data/team.json), then env, then 'Open'.
+// Case-normalises against the OWNERS enum so a roster entry of "IMan"
+// resolves to the canonical "Iman".
+export function canonicalizeOwner(raw: string | undefined | null): Owner | null {
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  const match = OWNERS.find((o) => o.toLowerCase() === lower);
+  return match ?? null;
+}
+
+async function ownerForCtx(ctx: Context): Promise<Owner> {
+  const tgId = ctx.from?.id;
+  if (tgId != null) {
+    const view = await rosterView();
+    const rosterOwner = canonicalizeOwner(view.ownerByTgId.get(tgId));
+    if (rosterOwner) return rosterOwner;
+  }
+  const envOwner = canonicalizeOwner(USER_NAMES[String(tgId ?? '')]);
+  return envOwner ?? 'Open';
 }
 
 function callerDisplayName(ctx: Context): string {
@@ -116,7 +135,7 @@ export async function cmdStart(ctx: Context): Promise<void> {
 
 export async function cmdMine(ctx: Context): Promise<void> {
   const { data } = await fetchActions();
-  const me = ownerForCtx(ctx);
+  const me = await ownerForCtx(ctx);
   const mine = data.items.filter((i) => (i.owner === me || i.owner === 'Both') && i.status !== 'DONE');
   if (mine.length === 0) {
     await ctx.reply(`no open items for ${me}`);
@@ -132,13 +151,18 @@ export async function cmdList(ctx: Context, args: string): Promise<void> {
   await ctx.reply(cat ? `Open in "${cat}":\n${listGrouped(items)}` : `All open items:\n${listGrouped(items)}`);
 }
 
-export async function cmdAdd(ctx: Context, args: string): Promise<void> {
+// v2.15 - now accepts an optional ownerOverride. When the LLM emits a
+// json-suggest with {"op":"add", "owner":"Iman", ...}, executeSuggestion
+// passes that through so "add task for Iman" actually assigns to Iman
+// instead of falling back to the caller's owner. Iman bug report
+// 2026-05-18 09:26 "I asked bot to add task for IMan it added it as open".
+export async function cmdAdd(ctx: Context, args: string, ownerOverride?: Owner): Promise<void> {
   const title = args.trim();
   if (!title) {
     await ctx.reply('usage: /add <title>');
     return;
   }
-  const me = ownerForCtx(ctx);
+  const me = ownerOverride ?? (await ownerForCtx(ctx));
   const by = callerDisplayName(ctx);
   const result = await mutateActions(async (data) => {
     const item = makeActionItem({ title, owner: me, createdBy: by }, data.items);

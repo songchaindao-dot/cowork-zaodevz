@@ -7,7 +7,7 @@
 import { promises as fs } from 'node:fs';
 import { Context } from 'grammy';
 import { COWORK_PATHS } from './paths';
-import { cmdAdd, cmdAssign, cmdBlocked, cmdDone, cmdSetDue, cmdSetNote, cmdSetPrio, cmdWip } from './commands';
+import { canonicalizeOwner, cmdAdd, cmdAssign, cmdBlocked, cmdDone, cmdSetDue, cmdSetNote, cmdSetPrio, cmdWip } from './commands';
 import type { SuggestActionOp } from './types';
 import { isAutoConfirm } from './users';
 
@@ -153,9 +153,14 @@ export async function maybeHandleConfirmation(ctx: Context, text: string): Promi
 
 async function executeSuggestion(ctx: Context, s: SuggestActionOp): Promise<void> {
   switch (s.op) {
-    case 'add':
-      await cmdAdd(ctx, s.title ?? '');
+    case 'add': {
+      // v2.15 - was dropping s.owner entirely so "add task for Iman" fell
+      // back to the caller's owner (or worse, 'Open' if caller not in
+      // USER_NAMES env). Canonicalise + pass through.
+      const overrideOwner = canonicalizeOwner(s.owner) ?? undefined;
+      await cmdAdd(ctx, s.title ?? '', overrideOwner);
       return;
+    }
     case 'wip':
       await cmdWip(ctx, s.id ?? '');
       return;

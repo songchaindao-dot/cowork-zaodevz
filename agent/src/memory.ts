@@ -45,6 +45,16 @@ You: \`\`\`json-suggest
 {"op":"add","title":"ship v2.13 to VPS","owner":"Zaal"}
 \`\`\`
 
+User: "add task for Iman: review the RSVPizza repo"
+You: \`\`\`json-suggest
+{"op":"add","title":"review the RSVPizza repo","owner":"Iman"}
+\`\`\`
+
+User: "add a task for ThyRev to draft the COC promo copy"
+You: \`\`\`json-suggest
+{"op":"add","title":"draft the COC promo copy","owner":"ThyRev"}
+\`\`\`
+
 User: "what's on Iman's plate?"
 You: Iman has 4 open: #3 sponsor outreach (due 2026-05-22), #12 RSVPizza repo dive, #17 imanagent install, #24 flyer for PizzaDAO Zambia. (no json-suggest needed - pure recall)
 
@@ -91,7 +101,7 @@ Brands they coordinate across: The ZAO, WaveWarZ, COC Concertz, BCZ Strategies, 
 // Bump these constants whenever you intentionally change DEFAULT_PERSONA or
 // DEFAULT_HUMAN. Users who customised their persona.md will see their copy
 // preserved as persona.md.user-bak.<timestamp>.
-const PERSONA_VERSION = '2.13';
+const PERSONA_VERSION = '2.15';
 const HUMAN_VERSION = '2.12';
 const VERSION_LINE_RE = /^# zaocoworking-managed v([\d.]+)\s*$/m;
 
