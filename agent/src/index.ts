@@ -21,6 +21,7 @@ import {
   cmdBlocked,
   cmdDaily,
   cmdDone,
+  cmdFind,
   cmdList,
   cmdMine,
   cmdStart,
@@ -151,6 +152,7 @@ function withArgs(handler: (ctx: Context, args: string) => Promise<void>): (ctx:
 
 bot.command('mine', withArgs((ctx) => cmdMine(ctx)));
 bot.command('list', withArgs(cmdList));
+bot.command('find', withArgs(cmdFind));
 bot.command('add', withArgs(cmdAdd));
 bot.command('wip', withArgs(cmdWip));
 bot.command('blocked', withArgs(cmdBlocked));
@@ -240,6 +242,7 @@ const TG_COMMANDS = [
   { command: 'start', description: 'help / list every command' },
   { command: 'mine', description: 'my open items' },
   { command: 'list', description: 'all open items by owner' },
+  { command: 'find', description: 'search items by keyword (title/notes/category)' },
   { command: 'add', description: 'create new item assigned to me' },
   { command: 'wip', description: 'move item to in-progress' },
   { command: 'blocked', description: 'mark item BLOCKED with reason' },

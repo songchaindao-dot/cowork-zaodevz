@@ -142,12 +142,71 @@ async function runStaleAlert(bot: Bot): Promise<void> {
   await markFired('stale-alert');
 }
 
+/**
+ * v2.9 - group digest. 10am ET daily. For each allowed chat (groups, not DMs),
+ * post a team-wide summary: total open, by-owner counts, items closed yesterday,
+ * anything BLOCKED right now. The team sees status in their existing chat surface
+ * without needing to DM the bot individually.
+ *
+ * Channel name: 'group_digest' (NOT a per-user opt-out - groups are not users).
+ * To mute, an admin removes the chat from data/team.json allowed_chats or just
+ * deletes the group.
+ */
+async function runGroupDigest(bot: Bot): Promise<void> {
+  if (await alreadyFired('group-digest')) return;
+  const { data } = await fetchActions();
+  const view = await rosterView();
+  if (view.allowedChatIds.size === 0) return;
+  const open = data.items.filter((i) => i.status !== 'DONE');
+  const wip = open.filter((i) => i.status === 'WIP');
+  const blocked = open.filter((i) => i.status === 'BLOCKED');
+  const yesterday = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
+  const closedYesterday = data.items.filter((i) => i.status === 'DONE' && (i.completedAt || '').slice(0, 10) === yesterday);
+  const byOwner = new Map<string, number>();
+  for (const i of open) byOwner.set(i.owner, (byOwner.get(i.owner) ?? 0) + 1);
+  const lines: string[] = [
+    `team digest - ${isoDate(new Date())}`,
+    '',
+    `${open.length} open (${wip.length} WIP, ${blocked.length} blocked)`,
+  ];
+  if (byOwner.size > 0) {
+    const parts: string[] = [];
+    for (const [owner, count] of [...byOwner.entries()].sort((a, b) => b[1] - a[1])) {
+      parts.push(`${owner}:${count}`);
+    }
+    lines.push(`by owner: ${parts.join(' ')}`);
+  }
+  if (closedYesterday.length > 0) {
+    lines.push('');
+    lines.push(`closed yesterday (${closedYesterday.length}):`);
+    for (const i of closedYesterday.slice(0, 5)) lines.push(`  #${i.id} ${i.title}`);
+  }
+  if (blocked.length > 0) {
+    lines.push('');
+    lines.push(`BLOCKED (needs help):`);
+    for (const i of blocked.slice(0, 5)) lines.push(`  ${fmtItemShort(i)}`);
+  }
+  lines.push('');
+  lines.push('@mention me with a question or use /list for everything');
+  const text = lines.join('\n');
+  for (const chatId of view.allowedChatIds) {
+    try {
+      await bot.api.sendMessage(chatId, text);
+      console.log(`[scheduler] group digest posted to ${chatId}`);
+    } catch (err) {
+      console.error(`[scheduler] group digest to ${chatId} failed:`, (err as Error).message);
+    }
+  }
+  await markFired('group-digest');
+}
+
 export function startScheduler(bot: Bot): { stop: () => void } {
   const tasks = [
     cron.schedule('0 6 * * *', () => { runMorningDigest(bot).catch((e) => console.error('[scheduler] morning failed:', (e as Error).message)); }, { timezone: TZ }),
     cron.schedule('0 17 * * *', () => { runEodCheck(bot).catch((e) => console.error('[scheduler] eod failed:', (e as Error).message)); }, { timezone: TZ }),
     cron.schedule('0 9 * * *', () => { runStaleAlert(bot).catch((e) => console.error('[scheduler] stale failed:', (e as Error).message)); }, { timezone: TZ }),
+    cron.schedule('0 10 * * *', () => { runGroupDigest(bot).catch((e) => console.error('[scheduler] group digest failed:', (e as Error).message)); }, { timezone: TZ }),
   ];
-  console.log(`[scheduler] started ${tasks.length} cron jobs (morning 6am ET, eod 5pm ET, stale 9am ET)`);
+  console.log(`[scheduler] started ${tasks.length} cron jobs (morning 6am ET, stale 9am ET, group 10am ET, eod 5pm ET)`);
   return { stop: () => { for (const t of tasks) t.stop(); } };
 }

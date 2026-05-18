@@ -88,6 +88,7 @@ export async function cmdStart(ctx: Context): Promise<void> {
       'tracker:\n' +
       '  /mine - my open items\n' +
       '  /list [category] - all open items by owner\n' +
+      '  /find <keyword> - search items\n' +
       '  /add <title> - create item assigned to me\n' +
       '  /wip <id> - move to in-progress\n' +
       '  /blocked <id> <reason> - mark blocked\n' +
@@ -99,6 +100,8 @@ export async function cmdStart(ctx: Context): Promise<void> {
       '  /adduser <tg_id> <Name> [admin] - add member, no restart\n' +
       '  /addchat - allow CURRENT group chat\n' +
       '  /reload - force-refresh roster from github\n\n' +
+      'notifications:\n' +
+      '  /notify - manage my proactive DM channels\n\n' +
       'model / keys:\n' +
       '  /providers - list available LLM providers\n' +
       '  /mymodel - show my current provider/model\n' +
@@ -124,6 +127,36 @@ export async function cmdList(ctx: Context, args: string): Promise<void> {
   const cat = args.trim();
   const items = cat ? data.items.filter((i) => i.category.toLowerCase().includes(cat.toLowerCase())) : data.items;
   await ctx.reply(cat ? `Open in "${cat}":\n${listGrouped(items)}` : `All open items:\n${listGrouped(items)}`);
+}
+
+// v2.9 - keyword search across title + notes + category. case-insensitive.
+// Default 15 results, includes DONE items so people can find shipped things too.
+export async function cmdFind(ctx: Context, args: string): Promise<void> {
+  const q = args.trim().toLowerCase();
+  if (!q) {
+    await ctx.reply('usage: /find <keyword>\nsearches title, notes, and category. case-insensitive.');
+    return;
+  }
+  const { data } = await fetchActions();
+  const matches = data.items.filter((i) => {
+    return (
+      (i.title || '').toLowerCase().includes(q) ||
+      (i.notes || '').toLowerCase().includes(q) ||
+      (i.category || '').toLowerCase().includes(q)
+    );
+  });
+  if (matches.length === 0) {
+    await ctx.reply(`no matches for "${q}"`);
+    return;
+  }
+  const open = matches.filter((i) => i.status !== 'DONE');
+  const done = matches.filter((i) => i.status === 'DONE');
+  const lines: string[] = [`"${q}" - ${matches.length} match${matches.length === 1 ? '' : 'es'} (${open.length} open, ${done.length} done):`, ''];
+  for (const i of [...open, ...done].slice(0, 15)) {
+    lines.push(`  ${formatItem(i)}`);
+  }
+  if (matches.length > 15) lines.push(`  ... and ${matches.length - 15} more`);
+  await ctx.reply(lines.join('\n'));
 }
 
 export async function cmdAdd(ctx: Context, args: string): Promise<void> {
