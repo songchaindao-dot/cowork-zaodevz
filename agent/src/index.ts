@@ -44,6 +44,8 @@ import {
   cmdSetKey,
   cmdSetModel,
 } from './user-commands';
+import { cmdAddChat, cmdAddUser, cmdReload, cmdTeam } from './roster-commands';
+import { rosterView } from './roster';
 import { resolveLLMForUser } from './users';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -52,31 +54,33 @@ if (!token) {
   process.exit(1);
 }
 
-const ALLOWED_USERS = new Set(
-  (process.env.ALLOWLIST_USER_IDS ?? '').split(',').map((s) => Number(s.trim())).filter(Boolean),
-);
-const ALLOWED_CHATS = new Set(
-  (process.env.ALLOWLIST_CHAT_IDS ?? '').split(',').map((s) => Number(s.trim())).filter(Boolean),
-);
-if (ALLOWED_USERS.size === 0) {
-  console.error('ALLOWLIST_USER_IDS empty - bot would accept nothing');
-  process.exit(1);
-}
-
 const bot = new Bot(token);
 
 await ensureCoworkHome();
+
+// Roster is loaded from data/team.json in repo via Octokit + cached locally.
+// ENV ALLOWLIST_USER_IDS / ALLOWLIST_CHAT_IDS are now FALLBACK ONLY (cold start
+// without GITHUB_TOKEN). Adding a user = /adduser <tg_id> <Name> from admin DM,
+// commits to repo, hot-reloads. NO restart needed.
+const bootRoster = await rosterView();
+if (bootRoster.allowedUserIds.size === 0) {
+  console.error('roster empty - no users allowed. set ALLOWLIST_USER_IDS as fallback or push data/team.json');
+  process.exit(1);
+}
+console.log(`[zaocoworking] roster loaded: ${bootRoster.memberCount} members, ${bootRoster.chatCount} chats`);
 
 function chatScopeOf(ctx: Context): string {
   return ctx.chat?.type === 'private' ? 'private' : String(ctx.chat?.id ?? 'unknown');
 }
 
-function isAllowedSender(ctx: Context): boolean {
+async function isAllowedSender(ctx: Context): Promise<boolean> {
   const userId = ctx.from?.id;
-  if (!userId || !ALLOWED_USERS.has(userId)) return false;
+  if (!userId) return false;
+  const view = await rosterView();
+  if (!view.allowedUserIds.has(userId)) return false;
   if (ctx.chat?.type === 'private') return true;
   // Group: chat must be allowlisted AND message must @mention the bot
-  if (!ctx.chat?.id || !ALLOWED_CHATS.has(ctx.chat.id)) return false;
+  if (!ctx.chat?.id || !view.allowedChatIds.has(ctx.chat.id)) return false;
   const text = ctx.message?.text ?? '';
   const me = bot.botInfo?.username ?? '';
   return me ? text.includes(`@${me}`) : false;
@@ -130,13 +134,13 @@ async function withErrorReply(ctx: Context, fn: () => Promise<void>): Promise<vo
 }
 
 bot.command('start', async (ctx) => {
-  if (!isAllowedSender(ctx)) return;
+  if (!(await isAllowedSender(ctx))) return;
   await withErrorReply(ctx, () => cmdStart(ctx));
 });
 
 function withArgs(handler: (ctx: Context, args: string) => Promise<void>): (ctx: Context) => Promise<void> {
   return async (ctx: Context) => {
-    if (!isAllowedSender(ctx)) return;
+    if (!(await isAllowedSender(ctx))) return;
     const text = ctx.message?.text ?? '';
     const args = text.replace(/^\/\w+(@\S+)?\s*/, '');
     await withErrorReply(ctx, () => handler(ctx, args));
@@ -159,10 +163,16 @@ bot.command('setkey', withArgs(cmdSetKey));
 bot.command('clearkey', withArgs(cmdClearKey));
 bot.command('providers', withArgs((ctx) => cmdProviders(ctx)));
 
+// v2.6 - team roster (no-restart member management)
+bot.command('team', withArgs((ctx) => cmdTeam(ctx)));
+bot.command('adduser', withArgs(cmdAddUser));
+bot.command('addchat', withArgs((ctx) => cmdAddChat(ctx)));
+bot.command('reload', withArgs((ctx) => cmdReload(ctx)));
+
 bot.on('message:text', async (ctx) => {
   const text = ctx.message?.text ?? '';
   if (text.startsWith('/')) return; // already handled
-  if (!isAllowedSender(ctx)) {
+  if (!(await isAllowedSender(ctx))) {
     console.log(`[zaocoworking] drop from ${ctx.from?.id} (${ctx.from?.username ?? '?'}) chat=${ctx.chat?.id}`);
     return;
   }
