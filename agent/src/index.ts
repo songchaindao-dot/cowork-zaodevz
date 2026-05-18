@@ -41,6 +41,7 @@ import {
 } from './memory';
 import { logMessage } from './transcripts';
 import {
+  cmdAutoConfirm,
   cmdClearKey,
   cmdMyModel,
   cmdProviders,
@@ -170,6 +171,7 @@ bot.command('mymodel', withArgs((ctx) => cmdMyModel(ctx)));
 bot.command('setkey', withArgs(cmdSetKey));
 bot.command('clearkey', withArgs(cmdClearKey));
 bot.command('providers', withArgs((ctx) => cmdProviders(ctx)));
+bot.command('autoconfirm', withArgs(cmdAutoConfirm));
 
 // v2.6 - team roster (no-restart member management)
 bot.command('team', withArgs((ctx) => cmdTeam(ctx)));
@@ -266,6 +268,7 @@ const TG_COMMANDS = [
   { command: 'setmodel', description: 'choose provider and model' },
   { command: 'setkey', description: 'DM only: bring your own API key' },
   { command: 'clearkey', description: 'drop my BYOK for a provider' },
+  { command: 'autoconfirm', description: 'on|off - skip "yes" step on NL edits' },
 ];
 
 // v2.8 - start the cron scheduler (morning digest, EOD check, stale alert)

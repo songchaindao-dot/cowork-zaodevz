@@ -20,6 +20,10 @@ export interface UserPrefs {
   // v2.8 - proactive notification opt-out (default: all channels ON).
   // Stored as { channel: false } for explicit disables. Missing = enabled.
   notify_disabled?: Partial<Record<NotifyChannel, boolean>>;
+  // v2.11 - if true, natural-language mutations skip the suggest-then-confirm
+  // step and write directly. Default: false (confirm flow). Admins typically
+  // enable this for daily ops; cautious users leave it off.
+  auto_confirm?: boolean;
   updated_at?: string;
 }
 
@@ -109,4 +113,16 @@ export async function isNotifyEnabled(tgId: number, channel: NotifyChannel): Pro
   const prefs = await loadUserPrefs(tgId);
   if (!prefs?.notify_disabled) return true; // default ON
   return !prefs.notify_disabled[channel];
+}
+
+// v2.11 - autoconfirm helpers
+export async function setAutoConfirm(tgId: number, enabled: boolean): Promise<void> {
+  const existing = (await loadUserPrefs(tgId)) ?? { tg_id: tgId };
+  existing.auto_confirm = enabled;
+  await saveUserPrefs(existing);
+}
+
+export async function isAutoConfirm(tgId: number): Promise<boolean> {
+  const prefs = await loadUserPrefs(tgId);
+  return prefs?.auto_confirm === true;
 }
