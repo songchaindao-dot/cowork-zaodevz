@@ -60,13 +60,31 @@ const DEFAULT_HUMAN = `Team (4 members, 1 bot):
 
 Brands they coordinate across: The ZAO, WaveWarZ, COC Concertz, BCZ Strategies, Magnetiq, Attabotty, ZAOstock, BetterCallZaal.`;
 
+// v2.12 - version markers on the seed-controlled files.
+// Bug we hit 2026-05-18: seedIfMissing only writes on first install, so prompt
+// changes in the code never reached disk on existing installs. Iman kept getting
+// the old hallucinating persona after we deployed v2.11. Fix: stamp a version
+// marker at the top of each managed file; on every boot, if the file's marker
+// doesn't match the current code version, back up the old file and write fresh.
+//
+// Bump these constants whenever you intentionally change DEFAULT_PERSONA or
+// DEFAULT_HUMAN. Users who customised their persona.md will see their copy
+// preserved as persona.md.user-bak.<timestamp>.
+const PERSONA_VERSION = '2.12';
+const HUMAN_VERSION = '2.12';
+const VERSION_LINE_RE = /^# zaocoworking-managed v([\d.]+)\s*$/m;
+
+function withVersionMarker(version: string, content: string): string {
+  return `# zaocoworking-managed v${version}\n# DO NOT EDIT THIS LINE - persona auto-updates when version changes\n# Want to customise? Make a copy at persona.local.md\n\n${content}\n`;
+}
+
 export async function ensureCoworkHome(): Promise<void> {
   await fs.mkdir(COWORK_PATHS.home, { recursive: true });
   await fs.mkdir(COWORK_PATHS.recent, { recursive: true });
   await fs.mkdir(COWORK_PATHS.archive, { recursive: true });
   await fs.mkdir(COWORK_PATHS.sentinels, { recursive: true });
-  await seedIfMissing(COWORK_PATHS.persona, DEFAULT_PERSONA);
-  await seedIfMissing(COWORK_PATHS.human, DEFAULT_HUMAN);
+  await seedOrUpdate(COWORK_PATHS.persona, PERSONA_VERSION, DEFAULT_PERSONA);
+  await seedOrUpdate(COWORK_PATHS.human, HUMAN_VERSION, DEFAULT_HUMAN);
   await seedIfMissing(COWORK_PATHS.tasks, '[]');
 }
 
@@ -76,6 +94,35 @@ async function seedIfMissing(path: string, content: string): Promise<void> {
   } catch {
     await fs.writeFile(path, content, 'utf8');
   }
+}
+
+/**
+ * Write `content` to `path` with a version marker. If the file already exists
+ * and its marker matches `version`, do nothing. If the marker differs (or is
+ * missing - first install of v2.12+), back up the old file and write the new
+ * version. The backup uses `.user-bak.<unix-ts>` so admins can recover any
+ * local edits.
+ */
+async function seedOrUpdate(path: string, version: string, content: string): Promise<void> {
+  const expectedFile = withVersionMarker(version, content);
+  let existing: string | null = null;
+  try {
+    existing = await fs.readFile(path, 'utf8');
+  } catch {
+    // first install - just write
+    await fs.writeFile(path, expectedFile, 'utf8');
+    console.log(`[memory] seeded ${path} at v${version}`);
+    return;
+  }
+  const match = existing.match(VERSION_LINE_RE);
+  const currentVersion = match?.[1];
+  if (currentVersion === version) return;
+  // version mismatch (or no marker at all) - back up + write fresh
+  const ts = Math.floor(Date.now() / 1000);
+  const backupPath = `${path}.user-bak.${ts}`;
+  await fs.writeFile(backupPath, existing, 'utf8');
+  await fs.writeFile(path, expectedFile, 'utf8');
+  console.log(`[memory] updated ${path}: ${currentVersion ?? 'unmarked'} -> v${version} (old saved to ${backupPath})`);
 }
 
 async function readOr(path: string, fallback: string): Promise<string> {
