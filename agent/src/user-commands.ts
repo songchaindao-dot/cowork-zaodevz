@@ -9,9 +9,11 @@ import { Context } from 'grammy';
 import { PROVIDERS, DEFAULT_PROVIDER, DEFAULT_MODEL } from './llm';
 import {
   clearUserApiKey,
+  isAutoConfirm,
   isValidProvider,
   loadUserPrefs,
   resolveLLMForUser,
+  setAutoConfirm,
   setUserApiKey,
   setUserModel,
 } from './users';
@@ -95,6 +97,32 @@ export async function cmdClearKey(ctx: Context, args: string): Promise<void> {
   }
   await clearUserApiKey(id, provider);
   await ctx.reply(`cleared ${provider} key. falls back to env default.`);
+}
+
+// v2.11 - autoconfirm. When ON, natural-language mutations write immediately
+// instead of asking "reply yes to confirm". Slash commands always write
+// directly regardless of this setting.
+export async function cmdAutoConfirm(ctx: Context, args: string): Promise<void> {
+  const id = tgId(ctx);
+  if (!id) return;
+  const arg = args.trim().toLowerCase();
+  if (arg === '') {
+    const current = await isAutoConfirm(id);
+    await ctx.reply(
+      `autoconfirm: ${current ? 'ON' : 'OFF'}\n\nWhen ON: natural-language requests like "set #24 due date to 2026-05-28" run immediately.\nWhen OFF (default): bot suggests + asks "yes" to confirm.\nSlash commands (/setdue, /done, etc) always run directly either way.\n\nusage: /autoconfirm on | off`,
+    );
+    return;
+  }
+  if (arg !== 'on' && arg !== 'off') {
+    await ctx.reply('usage: /autoconfirm on | off');
+    return;
+  }
+  await setAutoConfirm(id, arg === 'on');
+  await ctx.reply(
+    arg === 'on'
+      ? 'autoconfirm ON. natural-language edits run immediately. use /autoconfirm off to undo.'
+      : 'autoconfirm OFF. natural-language edits will ask "yes" to confirm first.',
+  );
 }
 
 export async function cmdProviders(ctx: Context): Promise<void> {

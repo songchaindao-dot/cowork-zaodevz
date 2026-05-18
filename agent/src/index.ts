@@ -23,6 +23,9 @@ import {
   cmdDone,
   cmdList,
   cmdMine,
+  cmdSetDue,
+  cmdSetNote,
+  cmdSetPrio,
   cmdStart,
   cmdWip,
 } from './commands';
@@ -38,6 +41,7 @@ import {
 } from './memory';
 import { logMessage } from './transcripts';
 import {
+  cmdAutoConfirm,
   cmdClearKey,
   cmdMyModel,
   cmdProviders,
@@ -156,6 +160,9 @@ bot.command('wip', withArgs(cmdWip));
 bot.command('blocked', withArgs(cmdBlocked));
 bot.command('done', withArgs(cmdDone));
 bot.command('assign', withArgs(cmdAssign));
+bot.command('setdue', withArgs(cmdSetDue));
+bot.command('setnote', withArgs(cmdSetNote));
+bot.command('setprio', withArgs(cmdSetPrio));
 bot.command('daily', withArgs((ctx) => cmdDaily(ctx)));
 
 // v2.5 - model selection + BYOK
@@ -164,6 +171,7 @@ bot.command('mymodel', withArgs((ctx) => cmdMyModel(ctx)));
 bot.command('setkey', withArgs(cmdSetKey));
 bot.command('clearkey', withArgs(cmdClearKey));
 bot.command('providers', withArgs((ctx) => cmdProviders(ctx)));
+bot.command('autoconfirm', withArgs(cmdAutoConfirm));
 
 // v2.6 - team roster (no-restart member management)
 bot.command('team', withArgs((ctx) => cmdTeam(ctx)));
@@ -245,6 +253,9 @@ const TG_COMMANDS = [
   { command: 'blocked', description: 'mark item BLOCKED with reason' },
   { command: 'done', description: 'mark item DONE' },
   { command: 'assign', description: 'reassign owner' },
+  { command: 'setdue', description: 'set due date (YYYY-MM-DD or "clear")' },
+  { command: 'setnote', description: 'set or append notes on an item' },
+  { command: 'setprio', description: 'set priority (P1|P2|P3)' },
   { command: 'daily', description: 'admin: post digest of open items' },
   { command: 'team', description: 'show current roster + chats' },
   { command: 'adduser', description: 'admin: add member, no restart' },
@@ -257,6 +268,7 @@ const TG_COMMANDS = [
   { command: 'setmodel', description: 'choose provider and model' },
   { command: 'setkey', description: 'DM only: bring your own API key' },
   { command: 'clearkey', description: 'drop my BYOK for a provider' },
+  { command: 'autoconfirm', description: 'on|off - skip "yes" step on NL edits' },
 ];
 
 // v2.8 - start the cron scheduler (morning digest, EOD check, stale alert)

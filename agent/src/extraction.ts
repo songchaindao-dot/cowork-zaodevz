@@ -7,8 +7,9 @@
 import { promises as fs } from 'node:fs';
 import { Context } from 'grammy';
 import { COWORK_PATHS } from './paths';
-import { cmdAdd, cmdAssign, cmdBlocked, cmdDone, cmdWip } from './commands';
+import { cmdAdd, cmdAssign, cmdBlocked, cmdDone, cmdSetDue, cmdSetNote, cmdSetPrio, cmdWip } from './commands';
 import type { SuggestActionOp } from './types';
+import { isAutoConfirm } from './users';
 
 interface PendingSuggestion {
   chat_id: number;
@@ -50,6 +51,14 @@ export function describeSuggestion(s: SuggestActionOp): string {
       return `mark #${s.id} DONE${s.reason ? ` (${s.reason})` : ''}`;
     case 'assign':
       return `reassign #${s.id} -> ${s.owner}`;
+    case 'setdue':
+      return `set due on #${s.id} -> ${s.due || '(clear)'}`;
+    case 'setnote':
+      return s.appendNotes
+        ? `append note on #${s.id}`
+        : `replace notes on #${s.id}`;
+    case 'setprio':
+      return `set priority on #${s.id} -> ${s.priority}`;
   }
 }
 
@@ -86,13 +95,22 @@ export async function maybeStartSuggestionFlow(
   const chatId = ctx.chat?.id;
   const userId = ctx.from?.id;
   if (!chatId || !userId) return stripped;
+
+  // v2.11 - if user has auto_confirm on, skip the suggest-then-confirm step
+  // and execute directly. Trade safety for speed; default off.
+  if (await isAutoConfirm(userId)) {
+    await executeSuggestion(ctx, suggestion);
+    const note = `\n\n(auto-confirmed: ${describeSuggestion(suggestion)})`;
+    return stripped + note;
+  }
+
   await savePending({
     chat_id: chatId,
     from_user_id: userId,
     suggestion,
     createdAt: new Date().toISOString(),
   });
-  const tail = `\n\nsuggested: ${describeSuggestion(suggestion)}\nreply "yes" to confirm or anything else to cancel`;
+  const tail = `\n\nsuggested: ${describeSuggestion(suggestion)}\nreply "yes" to confirm or anything else to cancel\n(tip: /autoconfirm on to skip this step for future natural-language edits)`;
   return stripped + tail;
 }
 
@@ -130,6 +148,18 @@ async function executeSuggestion(ctx: Context, s: SuggestActionOp): Promise<void
       return;
     case 'assign':
       await cmdAssign(ctx, `${s.id ?? ''} ${s.owner ?? ''}`);
+      return;
+    case 'setdue':
+      await cmdSetDue(ctx, `${s.id ?? ''} ${s.due ?? 'clear'}`);
+      return;
+    case 'setnote': {
+      const prefix = s.appendNotes ? 'append: ' : '';
+      const text = s.appendNotes ?? s.notes ?? '';
+      await cmdSetNote(ctx, `${s.id ?? ''} ${prefix}${text}`);
+      return;
+    }
+    case 'setprio':
+      await cmdSetPrio(ctx, `${s.id ?? ''} ${s.priority ?? ''}`);
       return;
   }
 }

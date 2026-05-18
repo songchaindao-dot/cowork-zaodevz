@@ -1,12 +1,15 @@
-// Slash command handlers per doc 662 B.6. Nine commands:
-// /start /mine /list /add /wip /blocked /done /assign /daily
+// Slash command handlers per doc 662 B.6 + v2.10 setfield extension.
+// Tracker: /start /mine /list /add /wip /blocked /done /assign /daily
+// Setfield (v2.10): /setdue /setnote /setprio
 // Each mutation goes through mutateActions() with SHA-dance retry.
 
 import { Context } from 'grammy';
 import { fetchActions, makeActionItem, mutateActions } from './actions-store';
 import { notifyAssigned, notifyStatusChange } from './notifications';
-import type { ActionItem, ActionStatus, Owner } from './types';
+import type { ActionItem, ActionStatus, Owner, Priority } from './types';
 import { OWNERS } from './types';
+
+const PRIORITIES: readonly Priority[] = ['P1', 'P2', 'P3'];
 
 interface UserNameMap {
   [tgUserId: string]: Owner;
@@ -93,6 +96,9 @@ export async function cmdStart(ctx: Context): Promise<void> {
       '  /blocked <id> <reason> - mark blocked\n' +
       '  /done <id> - mark done\n' +
       '  /assign <id> <Owner> - reassign\n' +
+      '  /setdue <id> <YYYY-MM-DD> - set due date (or "clear")\n' +
+      '  /setnote <id> <text> - replace notes (or "append: <text>")\n' +
+      '  /setprio <id> <P1|P2|P3> - set priority\n' +
       '  /daily - admin: post digest of open items\n\n' +
       'team (admin):\n' +
       '  /team - show roster\n' +
@@ -222,6 +228,115 @@ export async function cmdAssign(ctx: Context, args: string): Promise<void> {
     await ctx.reply(`#${result.id} -> ${result.owner}: ${result.title}`);
     // v2.8 - notify the new owner instantly
     notifyAssigned(ctx.api, result, by).catch(() => { /* best-effort */ });
+  } else {
+    await ctx.reply(`no item #${id}`);
+  }
+}
+
+// v2.10 - setfield commands. Triggered by Iman bug: bot's concierge LLM fabricated
+// a "file doesn't exist" excuse when asked "update rent bill due date" because no
+// slash command for due-date edits existed. Now they do.
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export async function cmdSetDue(ctx: Context, args: string): Promise<void> {
+  const m = args.trim().match(/^(\d+)\s+(.+)$/);
+  if (!m) {
+    await ctx.reply('usage: /setdue <id> <YYYY-MM-DD>  (or "clear" to remove)');
+    return;
+  }
+  const [, id, rawDate] = m;
+  const value = rawDate.trim();
+  const clearing = value.toLowerCase() === 'clear' || value === '-';
+  if (!clearing && !ISO_DATE.test(value)) {
+    await ctx.reply('date must be YYYY-MM-DD format (e.g. 2026-05-28). got: ' + value);
+    return;
+  }
+  const by = callerDisplayName(ctx);
+  const newDue = clearing ? '' : value;
+  const result = await mutateActions(async (data) => {
+    const item = findItemById(data.items, id);
+    if (!item) return null;
+    const prev = item.due || '(none)';
+    item.due = newDue;
+    item.updatedAt = new Date().toISOString();
+    return {
+      data,
+      commitMessage: `bot: setdue #${id} ${prev} -> ${newDue || '(cleared)'} by ${by}`,
+      result: item,
+    };
+  });
+  if (result) {
+    await ctx.reply(`#${result.id} due ${result.due ? '-> ' + result.due : 'cleared'}: ${result.title}`);
+  } else {
+    await ctx.reply(`no item #${id}`);
+  }
+}
+
+export async function cmdSetNote(ctx: Context, args: string): Promise<void> {
+  const m = args.trim().match(/^(\d+)\s+([\s\S]+)$/);
+  if (!m) {
+    await ctx.reply('usage: /setnote <id> <text>  (prefix text with "append: " to add to existing notes)');
+    return;
+  }
+  const [, id, rawText] = m;
+  const text = rawText.trim();
+  const isAppend = /^append:\s*/i.test(text);
+  const newContent = isAppend ? text.replace(/^append:\s*/i, '') : text;
+  if (!newContent) {
+    await ctx.reply('note text cannot be empty');
+    return;
+  }
+  const by = callerDisplayName(ctx);
+  const result = await mutateActions(async (data) => {
+    const item = findItemById(data.items, id);
+    if (!item) return null;
+    if (isAppend && item.notes) {
+      item.notes = `${item.notes}\n\n${newContent}`;
+    } else {
+      item.notes = newContent;
+    }
+    item.updatedAt = new Date().toISOString();
+    return {
+      data,
+      commitMessage: `bot: ${isAppend ? 'append-note' : 'set-note'} #${id} by ${by}`,
+      result: item,
+    };
+  });
+  if (result) {
+    await ctx.reply(`#${result.id} notes ${isAppend ? 'appended' : 'set'}: ${result.title}`);
+  } else {
+    await ctx.reply(`no item #${id}`);
+  }
+}
+
+export async function cmdSetPrio(ctx: Context, args: string): Promise<void> {
+  const m = args.trim().match(/^(\d+)\s+(P[123])$/i);
+  if (!m) {
+    await ctx.reply('usage: /setprio <id> <P1|P2|P3>');
+    return;
+  }
+  const [, id, rawPrio] = m;
+  const prio = rawPrio.toUpperCase() as Priority;
+  if (!PRIORITIES.includes(prio)) {
+    await ctx.reply('priority must be P1, P2, or P3');
+    return;
+  }
+  const by = callerDisplayName(ctx);
+  const result = await mutateActions(async (data) => {
+    const item = findItemById(data.items, id);
+    if (!item) return null;
+    const prev = item.priority;
+    item.priority = prio;
+    item.updatedAt = new Date().toISOString();
+    return {
+      data,
+      commitMessage: `bot: setprio #${id} ${prev} -> ${prio} by ${by}`,
+      result: item,
+    };
+  });
+  if (result) {
+    await ctx.reply(`#${result.id} priority -> ${result.priority}: ${result.title}`);
   } else {
     await ctx.reply(`no item #${id}`);
   }
