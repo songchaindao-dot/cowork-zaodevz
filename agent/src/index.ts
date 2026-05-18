@@ -44,7 +44,7 @@ import {
   cmdSetKey,
   cmdSetModel,
 } from './user-commands';
-import { cmdAddChat, cmdAddUser, cmdReload, cmdTeam } from './roster-commands';
+import { cmdAddChat, cmdAddUser, cmdReload, cmdTeam, cmdWhoami } from './roster-commands';
 import { rosterView } from './roster';
 import { resolveLLMForUser } from './users';
 
@@ -169,11 +169,29 @@ bot.command('adduser', withArgs(cmdAddUser));
 bot.command('addchat', withArgs((ctx) => cmdAddChat(ctx)));
 bot.command('reload', withArgs((ctx) => cmdReload(ctx)));
 
+// v2.7 - self-onboarding. /whoami works for ANYONE (not gated by allowlist)
+// so new people can DM the bot and learn how to join.
+bot.command('whoami', (ctx) => withErrorReply(ctx, () => cmdWhoami(ctx)));
+
 bot.on('message:text', async (ctx) => {
   const text = ctx.message?.text ?? '';
   if (text.startsWith('/')) return; // already handled
   if (!(await isAllowedSender(ctx))) {
-    console.log(`[zaocoworking] drop from ${ctx.from?.id} (${ctx.from?.username ?? '?'}) chat=${ctx.chat?.id}`);
+    const userId = ctx.from?.id;
+    console.log(`[zaocoworking] drop from ${userId} (${ctx.from?.username ?? '?'}) chat=${ctx.chat?.id}`);
+    // v2.7 self-onboarding: in DMs only, reply to non-allowlisted users
+    // with their ID + how to ask an admin to add them. Groups stay silent
+    // (would be noisy if random people typed in a shared chat).
+    if (ctx.chat?.type === 'private' && userId) {
+      const name = ctx.from?.first_name ?? ctx.from?.username ?? 'there';
+      await ctx.reply(
+        `hi ${name}, you're not on the cowork roster yet.\n\n` +
+          `your telegram id is ${userId}.\n\n` +
+          `ask Zaal or Iman to run:\n` +
+          `/adduser ${userId} ${name}\n\n` +
+          `they'll get you added in a few seconds (no restart needed).`,
+      ).catch(() => {});
+    }
     return;
   }
   await logIncoming(ctx, text);
@@ -210,6 +228,39 @@ bot.on('message:text', async (ctx) => {
   }
 });
 
+// v2.7 - auto-register the slash command menu in Telegram on every boot. Adding
+// a new command in commands.ts now shows up in the menu automatically; no more
+// manual /setcommands in BotFather. Source-of-truth = code.
+const TG_COMMANDS = [
+  { command: 'start', description: 'help / list every command' },
+  { command: 'mine', description: 'my open items' },
+  { command: 'list', description: 'all open items by owner' },
+  { command: 'add', description: 'create new item assigned to me' },
+  { command: 'wip', description: 'move item to in-progress' },
+  { command: 'blocked', description: 'mark item BLOCKED with reason' },
+  { command: 'done', description: 'mark item DONE' },
+  { command: 'assign', description: 'reassign owner' },
+  { command: 'daily', description: 'admin: post digest of open items' },
+  { command: 'team', description: 'show current roster + chats' },
+  { command: 'adduser', description: 'admin: add member, no restart' },
+  { command: 'addchat', description: 'admin: allow CURRENT group chat' },
+  { command: 'reload', description: 'admin: refresh roster from github' },
+  { command: 'whoami', description: 'show my telegram id (for joining)' },
+  { command: 'providers', description: 'list LLM providers' },
+  { command: 'mymodel', description: 'my current provider + model' },
+  { command: 'setmodel', description: 'choose provider and model' },
+  { command: 'setkey', description: 'DM only: bring your own API key' },
+  { command: 'clearkey', description: 'drop my BYOK for a provider' },
+];
+
 await bot.start({
-  onStart: (info) => console.log(`[zaocoworking] online as @${info.username}`),
+  onStart: async (info) => {
+    console.log(`[zaocoworking] online as @${info.username}`);
+    try {
+      await bot.api.setMyCommands(TG_COMMANDS);
+      console.log(`[zaocoworking] registered ${TG_COMMANDS.length} slash commands with telegram`);
+    } catch (err) {
+      console.error('[zaocoworking] setMyCommands failed:', (err as Error).message);
+    }
+  },
 });
