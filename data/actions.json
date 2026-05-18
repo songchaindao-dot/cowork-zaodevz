@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-18T13:17:43.951Z",
+  "updatedAt": "2026-05-18T13:24:38.597Z",
   "items": [
     {
       "id": "1",
@@ -601,7 +601,7 @@
       "id": "25",
       "title": "Align ZaoDevz brand with the Victoria Falls Pizza Party on 22 May 2026",
       "createdBy": "IMan",
-      "owner": "Open",
+      "owner": "Iman",
       "status": "TODO",
       "category": "Other",
       "priority": "P2",
@@ -613,7 +613,10 @@
       "due": "",
       "notes": "",
       "createdAt": "2026-05-18T13:17:43.951Z",
-      "updatedAt": "2026-05-18T13:17:43.951Z"
+      "updatedAt": "2026-05-18T13:24:38.596Z",
+      "taskType": "task",
+      "requiresApproval": false,
+      "claimable": false
     }
   ],
   "recurringDefs": []
