@@ -4,6 +4,7 @@
 
 import { Context } from 'grammy';
 import { fetchActions, makeActionItem, mutateActions } from './actions-store';
+import { notifyAssigned, notifyStatusChange } from './notifications';
 import type { ActionItem, ActionStatus, Owner } from './types';
 import { OWNERS } from './types';
 
@@ -172,6 +173,10 @@ async function applyStatusCommand(ctx: Context, args: string, status: ActionStat
   });
   if (result) {
     await ctx.reply(`${label} #${result.id}: ${result.title}`);
+    // v2.8 - notify the owner if someone else updated their item
+    if (status === 'DONE' || status === 'BLOCKED' || status === 'WIP') {
+      notifyStatusChange(ctx.api, result, status, by, reason).catch(() => { /* best-effort */ });
+    }
   } else {
     await ctx.reply(`no item #${id}`);
   }
@@ -215,6 +220,8 @@ export async function cmdAssign(ctx: Context, args: string): Promise<void> {
   });
   if (result) {
     await ctx.reply(`#${result.id} -> ${result.owner}: ${result.title}`);
+    // v2.8 - notify the new owner instantly
+    notifyAssigned(ctx.api, result, by).catch(() => { /* best-effort */ });
   } else {
     await ctx.reply(`no item #${id}`);
   }

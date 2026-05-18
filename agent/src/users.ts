@@ -8,11 +8,18 @@ import { PROVIDERS, type Provider } from './llm';
 
 const USERS_DIR = join(COWORK_PATHS.home, 'users');
 
+export type NotifyChannel = 'morning_digest' | 'eod_check' | 'stale_alert' | 'change_events';
+
+export const NOTIFY_CHANNELS: readonly NotifyChannel[] = ['morning_digest', 'eod_check', 'stale_alert', 'change_events'];
+
 export interface UserPrefs {
   tg_id: number;
   preferred_provider?: Provider;
   preferred_model?: string;
   api_keys?: Partial<Record<Provider, string>>;
+  // v2.8 - proactive notification opt-out (default: all channels ON).
+  // Stored as { channel: false } for explicit disables. Missing = enabled.
+  notify_disabled?: Partial<Record<NotifyChannel, boolean>>;
   updated_at?: string;
 }
 
@@ -81,4 +88,25 @@ export async function resolveLLMForUser(tgId: number): Promise<ResolvedLLM> {
 
 export function isValidProvider(s: string): s is Provider {
   return (PROVIDERS as readonly string[]).includes(s);
+}
+
+export function isValidNotifyChannel(s: string): s is NotifyChannel {
+  return (NOTIFY_CHANNELS as readonly string[]).includes(s);
+}
+
+export async function setNotifyChannel(tgId: number, channel: NotifyChannel, enabled: boolean): Promise<void> {
+  const existing = (await loadUserPrefs(tgId)) ?? { tg_id: tgId };
+  existing.notify_disabled = { ...(existing.notify_disabled ?? {}) };
+  if (enabled) {
+    delete existing.notify_disabled[channel];
+  } else {
+    existing.notify_disabled[channel] = true;
+  }
+  await saveUserPrefs(existing);
+}
+
+export async function isNotifyEnabled(tgId: number, channel: NotifyChannel): Promise<boolean> {
+  const prefs = await loadUserPrefs(tgId);
+  if (!prefs?.notify_disabled) return true; // default ON
+  return !prefs.notify_disabled[channel];
 }

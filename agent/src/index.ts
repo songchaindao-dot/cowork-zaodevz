@@ -45,7 +45,9 @@ import {
   cmdSetModel,
 } from './user-commands';
 import { cmdAddChat, cmdAddUser, cmdReload, cmdTeam, cmdWhoami } from './roster-commands';
+import { cmdNotify } from './notify-commands';
 import { rosterView } from './roster';
+import { startScheduler } from './scheduler';
 import { resolveLLMForUser } from './users';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -173,6 +175,9 @@ bot.command('reload', withArgs((ctx) => cmdReload(ctx)));
 // so new people can DM the bot and learn how to join.
 bot.command('whoami', (ctx) => withErrorReply(ctx, () => cmdWhoami(ctx)));
 
+// v2.8 - proactive notification opt-out (per-user)
+bot.command('notify', withArgs(cmdNotify));
+
 bot.on('message:text', async (ctx) => {
   const text = ctx.message?.text ?? '';
   if (text.startsWith('/')) return; // already handled
@@ -246,12 +251,16 @@ const TG_COMMANDS = [
   { command: 'addchat', description: 'admin: allow CURRENT group chat' },
   { command: 'reload', description: 'admin: refresh roster from github' },
   { command: 'whoami', description: 'show my telegram id (for joining)' },
+  { command: 'notify', description: 'manage my proactive DM channels' },
   { command: 'providers', description: 'list LLM providers' },
   { command: 'mymodel', description: 'my current provider + model' },
   { command: 'setmodel', description: 'choose provider and model' },
   { command: 'setkey', description: 'DM only: bring your own API key' },
   { command: 'clearkey', description: 'drop my BYOK for a provider' },
 ];
+
+// v2.8 - start the cron scheduler (morning digest, EOD check, stale alert)
+startScheduler(bot);
 
 await bot.start({
   onStart: async (info) => {
