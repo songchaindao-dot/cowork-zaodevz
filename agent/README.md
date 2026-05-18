@@ -17,16 +17,35 @@ Per spec: [ZAOOS doc 662](https://github.com/bettercallzaal/ZAOOS/tree/main/rese
 ## Slash commands
 
 ```
-/start                       - help
-/mine                        - my open items
-/list [category]             - all open items by owner
-/add <title>                 - create item (owner = me, status = TODO)
-/wip <id>                    - move to in-progress
-/blocked <id> <reason>       - mark blocked
-/done <id>                   - mark done
-/assign <id> <Owner>         - reassign to Zaal|Iman|Both|ThyRev|Samantha|Open
-/daily                       - admin: post open-items digest
+tracker:
+  /start                       - help
+  /mine                        - my open items
+  /list [category]             - all open items by owner
+  /add <title>                 - create item (owner = me, status = TODO)
+  /wip <id>                    - move to in-progress
+  /blocked <id> <reason>       - mark blocked
+  /done <id>                   - mark done
+  /assign <id> <Owner>         - reassign to Zaal|Iman|Both|ThyRev|Samantha|Open
+  /daily                       - admin: post open-items digest
+
+model / BYOK (v2.5):
+  /providers                   - list claude-max | claude-api | openai | minimax
+  /mymodel                     - show my current provider/model + key source
+  /setmodel <provider> <model> - switch (per-user, persisted)
+  /setkey <provider> <key>     - DM only; bring-your-own-key
+  /clearkey <provider>         - drop my key, fall back to env
 ```
+
+### Default provider
+
+`claude-max` (local Claude CLI subprocess, Max plan OAuth, $0 marginal cost). Set `DEFAULT_LLM_PROVIDER` + `DEFAULT_LLM_MODEL` in `.env` to change the global default.
+
+### BYOK security
+
+- `/setkey` is **DM-only** - bot refuses keys in group chats
+- Bot deletes the user's key message from Telegram history after saving (best-effort, requires bot delete permission)
+- Per-user file at `~/.zaocoworking/users/<tg_id>.json` chmod 600
+- No encryption at rest in v2.5 - relies on file perms + root-only access. Encrypt in v3 if needed.
 
 ## Filesystem (`~/.zaocoworking/`)
 
