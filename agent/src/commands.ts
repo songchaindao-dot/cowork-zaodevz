@@ -83,15 +83,22 @@ function updateStatus(items: ActionItem[], id: string, status: ActionStatus, by:
 
 export async function cmdStart(ctx: Context): Promise<void> {
   await ctx.reply(
-    'ZAOcoworkingBot online. Commands:\n' +
-      '/mine - my open items\n' +
-      '/list [category] - all open items by owner\n' +
-      '/add <title> - create item assigned to me\n' +
-      '/wip <id> - move to in-progress\n' +
-      '/blocked <id> <reason> - mark blocked\n' +
-      '/done <id> - mark done\n' +
-      '/assign <id> <Owner> - reassign\n' +
-      '/daily - admin: post digest of open items',
+    'ZAOcoworkingBot online. Commands:\n\n' +
+      'tracker:\n' +
+      '  /mine - my open items\n' +
+      '  /list [category] - all open items by owner\n' +
+      '  /add <title> - create item assigned to me\n' +
+      '  /wip <id> - move to in-progress\n' +
+      '  /blocked <id> <reason> - mark blocked\n' +
+      '  /done <id> - mark done\n' +
+      '  /assign <id> <Owner> - reassign\n' +
+      '  /daily - admin: post digest of open items\n\n' +
+      'model / keys:\n' +
+      '  /providers - list available LLM providers\n' +
+      '  /mymodel - show my current provider/model\n' +
+      '  /setmodel <provider> <model> - switch\n' +
+      '  /setkey <provider> <key> - DM only, BYOK\n' +
+      '  /clearkey <provider> - drop BYOK',
   );
 }
 
