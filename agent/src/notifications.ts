@@ -44,26 +44,27 @@ export async function notifyAssigned(api: Api, item: ActionItem, by: string): Pr
   );
 }
 
-/** Item creator + admins get notified on done/blocked from someone else. */
+/**
+ * Item creator + admins get notified on done/blocked from someone else.
+ * v2.14 - was building a (broken) display-name -> tg_id reverse lookup off
+ * the roster to skip self-notifications, which failed because the caller
+ * always passed `first_name` (display) and the roster stores formal names.
+ * Now takes the caller's tg_id directly; display name is for the DM body only.
+ */
 export async function notifyStatusChange(
   api: Api,
   item: ActionItem,
   newStatus: 'DONE' | 'BLOCKED' | 'WIP',
-  by: string,
+  byTgId: number | undefined,
+  byDisplayName: string,
   reason?: string,
 ): Promise<void> {
   const ownerTgId = await tgIdForOwner(item.owner);
   if (!ownerTgId) return;
-  // Don't notify the person who made the change themselves
-  const view = await rosterView();
-  const byOwner = Object.fromEntries(
-    [...view.nameByTgId.entries()].map(([id, n]) => [n, id]),
-  );
-  const byTgId = byOwner[by];
-  if (byTgId === ownerTgId) return;
+  if (byTgId !== undefined && byTgId === ownerTgId) return;
   const verb = newStatus === 'DONE' ? 'closed' : newStatus === 'BLOCKED' ? 'blocked' : 'moved to WIP';
   await sendDM(api, ownerTgId, 'change_events',
-    `#${item.id} ${verb} by ${by}: ${item.title}${reason ? `\nreason: ${reason}` : ''}`,
+    `#${item.id} ${verb} by ${byDisplayName}: ${item.title}${reason ? `\nreason: ${reason}` : ''}`,
   );
 }
 

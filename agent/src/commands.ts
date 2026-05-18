@@ -179,9 +179,10 @@ async function applyStatusCommand(ctx: Context, args: string, status: ActionStat
   });
   if (result) {
     await ctx.reply(`${label} #${result.id}: ${result.title}`);
-    // v2.8 - notify the owner if someone else updated their item
+    // v2.8 - notify the owner if someone else updated their item.
+    // v2.14 - pass tg_id (not display name) so self-skip actually works.
     if (status === 'DONE' || status === 'BLOCKED' || status === 'WIP') {
-      notifyStatusChange(ctx.api, result, status, by, reason).catch(() => { /* best-effort */ });
+      notifyStatusChange(ctx.api, result, status, ctx.from?.id, by, reason).catch(() => { /* best-effort */ });
     }
   } else {
     await ctx.reply(`no item #${id}`);

@@ -6,7 +6,7 @@
 
 import { Context } from 'grammy';
 import { notifyNewMember } from './notifications';
-import { addAllowedChat, addOrUpdateMember, forceReloadRoster, rosterView } from './roster';
+import { addAllowedChat, addOrUpdateMember, forceReloadRoster, loadRoster, rosterView } from './roster';
 
 async function isAdmin(ctx: Context): Promise<boolean> {
   const id = ctx.from?.id;
@@ -15,20 +15,30 @@ async function isAdmin(ctx: Context): Promise<boolean> {
   return view.adminUserIds.has(id);
 }
 
+// v2.14 - was making 3 redundant rosterView() calls and never enumerated the
+// chats section. One loadRoster() now, lists both members AND allowlisted chats.
 export async function cmdTeam(ctx: Context): Promise<void> {
+  const team = await loadRoster();
   const view = await rosterView();
-  const view2 = await rosterView();
-  const lines: string[] = [`team (${view.memberCount} members, ${view.chatCount} chats, updated ${view.updatedAt.slice(0, 16)}):`];
-  for (const [tgId, name] of view2.nameByTgId.entries()) {
-    const owner = view2.ownerByTgId.get(tgId) ?? '?';
-    const admin = view2.adminUserIds.has(tgId) ? ' admin' : '';
+  const lines: string[] = [
+    `team (${view.memberCount} members, ${view.chatCount} chats, updated ${team.updatedAt.slice(0, 16)}):`,
+    '',
+    'members:',
+  ];
+  for (const [tgId, name] of view.nameByTgId.entries()) {
+    const owner = view.ownerByTgId.get(tgId) ?? '?';
+    const admin = view.adminUserIds.has(tgId) ? ' admin' : '';
     lines.push(`  ${name} (tg ${tgId}, owner=${owner}${admin})`);
-  }
-  for (const m of (await rosterView()).allowedUserIds) {
-    /* already covered */ void m;
   }
   lines.push('');
   lines.push('chats:');
+  if (team.allowed_chats.length === 0) {
+    lines.push('  (none allowlisted)');
+  } else {
+    for (const c of team.allowed_chats) {
+      lines.push(`  ${c.title} (id ${c.chat_id})`);
+    }
+  }
   await ctx.reply(lines.join('\n'));
 }
 
