@@ -47,6 +47,8 @@ import {
   cmdProviders,
   cmdSetKey,
   cmdSetModel,
+  handleAutoConfirmCallback,
+  maybeHandleAutoConfirmNL,
 } from './user-commands';
 import { cmdAddChat, cmdAddUser, cmdReload, cmdTeam, cmdWhoami } from './roster-commands';
 import { cmdNotify } from './notify-commands';
@@ -209,6 +211,10 @@ bot.on('message:text', async (ctx) => {
   }
   await logIncoming(ctx, text);
 
+  // v2.13 - intercept "autonomy on/off" + aliases BEFORE the LLM sees it.
+  // Iman tried "Autonomy on" in plain English and got nothing useful.
+  if (await maybeHandleAutoConfirmNL(ctx, text)) return;
+
   // Confirmation path - if pending suggestion exists for this chat+user, treat
   // this message as the y/n response.
   if (await maybeHandleConfirmation(ctx, text)) return;
@@ -270,6 +276,21 @@ const TG_COMMANDS = [
   { command: 'clearkey', description: 'drop my BYOK for a provider' },
   { command: 'autoconfirm', description: 'on|off - skip "yes" step on NL edits' },
 ];
+
+// v2.13 - inline-keyboard callbacks (for the bare /autoconfirm toggle UI).
+// Callback queries don't carry the user's text message, so we can't run the
+// full isAllowedSender @-mention check - just verify the user is on roster.
+bot.on('callback_query:data', async (ctx) => {
+  const userId = ctx.from?.id;
+  const view = await rosterView();
+  if (!userId || !view.allowedUserIds.has(userId)) {
+    await ctx.answerCallbackQuery('not on roster').catch(() => {});
+    return;
+  }
+  // Future callback handlers can chain; each returns true if it matched.
+  if (await handleAutoConfirmCallback(ctx)) return;
+  await ctx.answerCallbackQuery().catch(() => {});
+});
 
 // v2.8 - start the cron scheduler (morning digest, EOD check, stale alert)
 startScheduler(bot);
