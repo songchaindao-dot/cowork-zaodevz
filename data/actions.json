@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-18T20:39:52.511Z",
+  "updatedAt": "2026-05-18T20:41:32.815Z",
   "items": [
     {
       "id": "1",
@@ -671,6 +671,24 @@
       "notes": "",
       "createdAt": "2026-05-18T20:39:52.510Z",
       "updatedAt": "2026-05-18T20:39:52.510Z"
+    },
+    {
+      "id": "29",
+      "title": "Join t.me/onchainmediaco Telegram and introduce yourself",
+      "createdBy": "IMan",
+      "owner": "Iman",
+      "status": "TODO",
+      "category": "Other",
+      "priority": "P2",
+      "important": false,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "",
+      "notes": "",
+      "createdAt": "2026-05-18T20:41:32.815Z",
+      "updatedAt": "2026-05-18T20:41:32.815Z"
     }
   ],
   "recurringDefs": []
