@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-18T20:42:59.582Z",
+  "updatedAt": "2026-05-18T20:43:32.847Z",
   "items": [
     {
       "id": "1",
@@ -743,6 +743,24 @@
       "notes": "",
       "createdAt": "2026-05-18T20:42:59.582Z",
       "updatedAt": "2026-05-18T20:42:59.582Z"
+    },
+    {
+      "id": "33",
+      "title": "Review agent research folder 650-cowork-zaodevz-imanagent",
+      "createdBy": "IMan",
+      "owner": "Iman",
+      "status": "TODO",
+      "category": "Other",
+      "priority": "P2",
+      "important": false,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "",
+      "notes": "",
+      "createdAt": "2026-05-18T20:43:32.847Z",
+      "updatedAt": "2026-05-18T20:43:32.847Z"
     }
   ],
   "recurringDefs": []
