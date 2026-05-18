@@ -23,6 +23,9 @@ import {
   cmdDone,
   cmdList,
   cmdMine,
+  cmdSetDue,
+  cmdSetNote,
+  cmdSetPrio,
   cmdStart,
   cmdWip,
 } from './commands';
@@ -156,6 +159,9 @@ bot.command('wip', withArgs(cmdWip));
 bot.command('blocked', withArgs(cmdBlocked));
 bot.command('done', withArgs(cmdDone));
 bot.command('assign', withArgs(cmdAssign));
+bot.command('setdue', withArgs(cmdSetDue));
+bot.command('setnote', withArgs(cmdSetNote));
+bot.command('setprio', withArgs(cmdSetPrio));
 bot.command('daily', withArgs((ctx) => cmdDaily(ctx)));
 
 // v2.5 - model selection + BYOK
@@ -245,6 +251,9 @@ const TG_COMMANDS = [
   { command: 'blocked', description: 'mark item BLOCKED with reason' },
   { command: 'done', description: 'mark item DONE' },
   { command: 'assign', description: 'reassign owner' },
+  { command: 'setdue', description: 'set due date (YYYY-MM-DD or "clear")' },
+  { command: 'setnote', description: 'set or append notes on an item' },
+  { command: 'setprio', description: 'set priority (P1|P2|P3)' },
   { command: 'daily', description: 'admin: post digest of open items' },
   { command: 'team', description: 'show current roster + chats' },
   { command: 'adduser', description: 'admin: add member, no restart' },

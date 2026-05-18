@@ -7,7 +7,7 @@
 import { promises as fs } from 'node:fs';
 import { Context } from 'grammy';
 import { COWORK_PATHS } from './paths';
-import { cmdAdd, cmdAssign, cmdBlocked, cmdDone, cmdWip } from './commands';
+import { cmdAdd, cmdAssign, cmdBlocked, cmdDone, cmdSetDue, cmdSetNote, cmdSetPrio, cmdWip } from './commands';
 import type { SuggestActionOp } from './types';
 
 interface PendingSuggestion {
@@ -50,6 +50,14 @@ export function describeSuggestion(s: SuggestActionOp): string {
       return `mark #${s.id} DONE${s.reason ? ` (${s.reason})` : ''}`;
     case 'assign':
       return `reassign #${s.id} -> ${s.owner}`;
+    case 'setdue':
+      return `set due on #${s.id} -> ${s.due || '(clear)'}`;
+    case 'setnote':
+      return s.appendNotes
+        ? `append note on #${s.id}`
+        : `replace notes on #${s.id}`;
+    case 'setprio':
+      return `set priority on #${s.id} -> ${s.priority}`;
   }
 }
 
@@ -130,6 +138,18 @@ async function executeSuggestion(ctx: Context, s: SuggestActionOp): Promise<void
       return;
     case 'assign':
       await cmdAssign(ctx, `${s.id ?? ''} ${s.owner ?? ''}`);
+      return;
+    case 'setdue':
+      await cmdSetDue(ctx, `${s.id ?? ''} ${s.due ?? 'clear'}`);
+      return;
+    case 'setnote': {
+      const prefix = s.appendNotes ? 'append: ' : '';
+      const text = s.appendNotes ?? s.notes ?? '';
+      await cmdSetNote(ctx, `${s.id ?? ''} ${prefix}${text}`);
+      return;
+    }
+    case 'setprio':
+      await cmdSetPrio(ctx, `${s.id ?? ''} ${s.priority ?? ''}`);
       return;
   }
 }

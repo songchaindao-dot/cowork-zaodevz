@@ -59,10 +59,14 @@ export interface MemoryBlocks {
 }
 
 export interface SuggestActionOp {
-  op: 'add' | 'wip' | 'blocked' | 'done' | 'assign';
+  op: 'add' | 'wip' | 'blocked' | 'done' | 'assign' | 'setdue' | 'setnote' | 'setprio';
   id?: string;
   title?: string;
   owner?: Owner;
   reason?: string;
   category?: string;
+  due?: string;
+  notes?: string;
+  appendNotes?: string;
+  priority?: Priority;
 }
