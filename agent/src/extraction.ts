@@ -7,7 +7,7 @@
 import { promises as fs } from 'node:fs';
 import { Context } from 'grammy';
 import { COWORK_PATHS } from './paths';
-import { cmdAdd, cmdAssign, cmdBlocked, cmdDone, cmdSetDue, cmdSetNote, cmdSetPrio, cmdWip } from './commands';
+import { canonicalizeOwner, cmdAdd, cmdAssign, cmdBlocked, cmdDone, cmdSetDue, cmdSetNote, cmdSetPrio, cmdWip } from './commands';
 import type { SuggestActionOp } from './types';
 import { isAutoConfirm } from './users';
 
@@ -21,7 +21,8 @@ interface PendingSuggestion {
 const PENDING_TTL_MS = 5 * 60_000;
 
 const SUGGEST_RE = /```json-suggest\s*([\s\S]*?)\s*```/i;
-const YES_RE = /^(y|yes|yep|yeah|sure|do it|confirm|ok)\b/i;
+const YES_RE = /^(y|yes|yep|yeah|sure|do it|confirm|ok|okay|👍)\b/i;
+const NO_RE = /^(n|no|nope|nah|cancel|stop|skip|nvm|nevermind)\b/i;
 
 export function stripSuggestionBlock(text: string): string {
   return text.replace(SUGGEST_RE, '').trim();
@@ -121,13 +122,28 @@ export async function maybeStartSuggestionFlow(
  * Returns true if this message was a confirmation of a pending suggestion
  * (and we handled the execution). False otherwise - caller should proceed with
  * normal concierge flow.
+ *
+ * v2.14 - was treating ANY non-yes message inside the 5-min TTL as "cancelled",
+ * which ate unrelated follow-up questions ("what's on Zaal's plate?" 4 min after
+ * a suggestion became "cancelled" + the question was lost). Now only short
+ * explicit yes/no responses match; anything else falls through to the normal
+ * LLM path. The pending TTL expires naturally.
  */
 export async function maybeHandleConfirmation(ctx: Context, text: string): Promise<boolean> {
   const pending = await loadPending();
   if (!pending) return false;
   if (pending.chat_id !== ctx.chat?.id || pending.from_user_id !== ctx.from?.id) return false;
+
+  const trimmed = text.trim();
+  const isYes = YES_RE.test(trimmed);
+  const isNo = NO_RE.test(trimmed);
+  // Cap response length too: long messages are clearly a new conversation,
+  // not a confirm/cancel. 40 chars handles "yes please" / "no thanks" / etc.
+  if (!isYes && !isNo) return false;
+  if (trimmed.length > 40 && !isYes) return false;
+
   await clearPending();
-  if (!YES_RE.test(text.trim())) {
+  if (isNo) {
     await ctx.reply('cancelled');
     return true;
   }
@@ -137,9 +153,14 @@ export async function maybeHandleConfirmation(ctx: Context, text: string): Promi
 
 async function executeSuggestion(ctx: Context, s: SuggestActionOp): Promise<void> {
   switch (s.op) {
-    case 'add':
-      await cmdAdd(ctx, s.title ?? '');
+    case 'add': {
+      // v2.15 - was dropping s.owner entirely so "add task for Iman" fell
+      // back to the caller's owner (or worse, 'Open' if caller not in
+      // USER_NAMES env). Canonicalise + pass through.
+      const overrideOwner = canonicalizeOwner(s.owner) ?? undefined;
+      await cmdAdd(ctx, s.title ?? '', overrideOwner);
       return;
+    }
     case 'wip':
       await cmdWip(ctx, s.id ?? '');
       return;
