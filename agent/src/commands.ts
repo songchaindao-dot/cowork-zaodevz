@@ -7,10 +7,35 @@ import { Context } from 'grammy';
 import { fetchActions, makeActionItem, mutateActions } from './actions-store';
 import { notifyAssigned, notifyStatusChange } from './notifications';
 import { rosterView } from './roster';
+import { bonfireHook } from './teams';
+import type { TeamEventOp } from './teams';
 import type { ActionItem, ActionStatus, Owner, Priority } from './types';
 import { OWNERS } from './types';
 
 const PRIORITIES: readonly Priority[] = ['P1', 'P2', 'P3'];
+
+// Fire-and-forget hook to the ZABAL Bonfire (Doc 669 Phase 1). No-op if env
+// vars not configured. Never throws. Always best-effort - the action tracker
+// remains the source of truth; bonfire is an aggregated view layer.
+function fireBonfire(
+  op: TeamEventOp,
+  item: ActionItem,
+  ctx: Context,
+  extras: { reason?: string; previousOwner?: Owner; previousDue?: string; previousPriority?: Priority } = {},
+): void {
+  const actor = callerDisplayName(ctx);
+  const actorTgId = ctx.from?.id ?? 0;
+  bonfireHook({
+    op,
+    item,
+    actor,
+    actorTgId,
+    timestamp: new Date().toISOString(),
+    ...extras,
+  }).catch((err) => {
+    console.error('[bonfire] hook threw (should not):', err);
+  });
+}
 
 interface UserNameMap {
   [tgUserId: string]: Owner;
@@ -175,6 +200,7 @@ export async function cmdAdd(ctx: Context, args: string, ownerOverride?: Owner):
   });
   if (result) {
     await ctx.reply(`added #${result.id} (${result.owner}): ${result.title}`);
+    fireBonfire('add', result, ctx);
   }
 }
 
@@ -208,6 +234,9 @@ async function applyStatusCommand(ctx: Context, args: string, status: ActionStat
     if (status === 'DONE' || status === 'BLOCKED' || status === 'WIP') {
       notifyStatusChange(ctx.api, result, status, ctx.from?.id, by, reason).catch(() => { /* best-effort */ });
     }
+    // doc 669 Phase 1 - emit to ZABAL bonfire (no-op if disabled)
+    const op = status === 'WIP' ? 'wip' : status === 'BLOCKED' ? 'blocked' : 'done';
+    fireBonfire(op, result, ctx, { reason });
   } else {
     await ctx.reply(`no item #${id}`);
   }
@@ -238,9 +267,11 @@ export async function cmdAssign(ctx: Context, args: string): Promise<void> {
   }
   const owner = ownerRaw as Owner;
   const by = callerDisplayName(ctx);
+  let previousOwner: Owner | undefined;
   const result = await mutateActions(async (data) => {
     const item = data.items.find((i) => i.id === id);
     if (!item) return null;
+    previousOwner = item.owner;
     item.owner = owner;
     item.updatedAt = new Date().toISOString();
     return {
@@ -253,6 +284,8 @@ export async function cmdAssign(ctx: Context, args: string): Promise<void> {
     await ctx.reply(`#${result.id} -> ${result.owner}: ${result.title}`);
     // v2.8 - notify the new owner instantly
     notifyAssigned(ctx.api, result, by).catch(() => { /* best-effort */ });
+    // doc 669 Phase 1 - bonfire emit with previous owner edge
+    fireBonfire('assign', result, ctx, { previousOwner });
   } else {
     await ctx.reply(`no item #${id}`);
   }
@@ -279,9 +312,11 @@ export async function cmdSetDue(ctx: Context, args: string): Promise<void> {
   }
   const by = callerDisplayName(ctx);
   const newDue = clearing ? '' : value;
+  let previousDue: string | undefined;
   const result = await mutateActions(async (data) => {
     const item = findItemById(data.items, id);
     if (!item) return null;
+    previousDue = item.due || '';
     const prev = item.due || '(none)';
     item.due = newDue;
     item.updatedAt = new Date().toISOString();
@@ -293,6 +328,7 @@ export async function cmdSetDue(ctx: Context, args: string): Promise<void> {
   });
   if (result) {
     await ctx.reply(`#${result.id} due ${result.due ? '-> ' + result.due : 'cleared'}: ${result.title}`);
+    fireBonfire('setdue', result, ctx, { previousDue });
   } else {
     await ctx.reply(`no item #${id}`);
   }
@@ -330,6 +366,7 @@ export async function cmdSetNote(ctx: Context, args: string): Promise<void> {
   });
   if (result) {
     await ctx.reply(`#${result.id} notes ${isAppend ? 'appended' : 'set'}: ${result.title}`);
+    fireBonfire('setnote', result, ctx);
   } else {
     await ctx.reply(`no item #${id}`);
   }
@@ -348,20 +385,22 @@ export async function cmdSetPrio(ctx: Context, args: string): Promise<void> {
     return;
   }
   const by = callerDisplayName(ctx);
+  let previousPriority: Priority | undefined;
   const result = await mutateActions(async (data) => {
     const item = findItemById(data.items, id);
     if (!item) return null;
-    const prev = item.priority;
+    previousPriority = item.priority;
     item.priority = prio;
     item.updatedAt = new Date().toISOString();
     return {
       data,
-      commitMessage: `bot: setprio #${id} ${prev} -> ${prio} by ${by}`,
+      commitMessage: `bot: setprio #${id} ${previousPriority} -> ${prio} by ${by}`,
       result: item,
     };
   });
   if (result) {
     await ctx.reply(`#${result.id} priority -> ${result.priority}: ${result.title}`);
+    fireBonfire('setprio', result, ctx, { previousPriority });
   } else {
     await ctx.reply(`no item #${id}`);
   }

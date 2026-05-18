@@ -295,6 +295,14 @@ bot.on('callback_query:data', async (ctx) => {
 // v2.8 - start the cron scheduler (morning digest, EOD check, stale alert)
 startScheduler(bot);
 
+// doc 669 Phase 1 - ZABAL Bonfire integration. Log status at boot. Drain any
+// events that failed during the last run (best-effort).
+import { bonfireStatusLine, drainSpool, isBonfireEnabled } from './teams';
+console.log(`[zaocoworking] ${bonfireStatusLine()}`);
+if (isBonfireEnabled()) {
+  drainSpool().catch((e) => console.error('[bonfire] boot drain failed:', e));
+}
+
 await bot.start({
   onStart: async (info) => {
     console.log(`[zaocoworking] online as @${info.username}`);
