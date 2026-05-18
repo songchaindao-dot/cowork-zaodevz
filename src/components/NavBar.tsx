@@ -26,18 +26,18 @@ const PORTALS = [
     activeClass: "bg-amber-500/20 text-amber-200 border-amber-500/40",
   },
   {
-    href: "/calendar",
-    label: "Calendar",
-    sub: "Recurring Tasks & Schedule",
-    dot: "bg-cyan-400",
-    activeClass: "bg-cyan-500/20 text-cyan-200 border-cyan-500/40",
+    href: "/chat",
+    label: "Assistant",
+    sub: "Ask the AI about the board",
+    dot: "bg-teal-400",
+    activeClass: "bg-teal-500/20 text-teal-200 border-teal-500/40",
   },
 ];
 
 export function NavBar() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1 sm:gap-1.5 rounded-xl bg-black/25 border border-white/10 p-1 sm:p-1.5 overflow-x-auto scrollbar-none">
+    <nav className="flex gap-1.5 rounded-xl bg-black/25 border border-white/10 p-1.5">
       {PORTALS.map(({ href, label, sub, dot, activeClass }) => {
         const active = pathname === href;
         return (
@@ -45,7 +45,7 @@ export function NavBar() {
             key={href}
             href={href}
             title={sub}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium border transition-all whitespace-nowrap flex-shrink-0 ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-all whitespace-nowrap ${
               active
                 ? activeClass
                 : "border-transparent text-white/50 hover:text-white/80 hover:bg-white/[0.06]"
