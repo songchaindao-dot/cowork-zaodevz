@@ -5,6 +5,7 @@
 // /reload             - force-refresh roster from github (no restart)
 
 import { Context } from 'grammy';
+import { notifyNewMember } from './notifications';
 import { addAllowedChat, addOrUpdateMember, forceReloadRoster, rosterView } from './roster';
 
 async function isAdmin(ctx: Context): Promise<boolean> {
@@ -44,6 +45,7 @@ export async function cmdAddUser(ctx: Context, args: string): Promise<void> {
   const [, tgIdRaw, name, adminFlag] = m;
   const tgId = Number(tgIdRaw);
   try {
+    const wasAlreadyMember = (await rosterView()).allowedUserIds.has(tgId);
     const member = await addOrUpdateMember({
       name,
       telegram_id: tgId,
@@ -51,6 +53,10 @@ export async function cmdAddUser(ctx: Context, args: string): Promise<void> {
       admin: adminFlag === 'admin',
     });
     await ctx.reply(`added ${member.name} (tg ${member.telegram_id}, owner=${member.owner_value}${member.admin ? ', admin' : ''}). committed to data/team.json. roster reloaded - no restart.`);
+    // v2.8 - welcome the new member with a DM (only on first add, not updates)
+    if (!wasAlreadyMember) {
+      notifyNewMember(ctx.api, tgId, name, !!member.admin).catch(() => { /* best-effort */ });
+    }
   } catch (err) {
     await ctx.reply(`failed: ${(err as Error).message.slice(0, 200)}`);
   }
