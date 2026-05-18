@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-18T20:13:02.124Z",
+  "updatedAt": "2026-05-18T20:39:52.511Z",
   "items": [
     {
       "id": "1",
@@ -653,6 +653,24 @@
       "notes": "",
       "createdAt": "2026-05-18T20:13:02.124Z",
       "updatedAt": "2026-05-18T20:13:02.124Z"
+    },
+    {
+      "id": "28",
+      "title": "Read ZABAL Games Claude Code Hackathon README (doc 630)",
+      "createdBy": "IMan",
+      "owner": "Iman",
+      "status": "TODO",
+      "category": "Other",
+      "priority": "P2",
+      "important": false,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "",
+      "notes": "",
+      "createdAt": "2026-05-18T20:39:52.510Z",
+      "updatedAt": "2026-05-18T20:39:52.510Z"
     }
   ],
   "recurringDefs": []
