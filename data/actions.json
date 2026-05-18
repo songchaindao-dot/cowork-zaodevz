@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-18T20:41:32.815Z",
+  "updatedAt": "2026-05-18T20:42:28.666Z",
   "items": [
     {
       "id": "1",
@@ -689,6 +689,24 @@
       "notes": "",
       "createdAt": "2026-05-18T20:41:32.815Z",
       "updatedAt": "2026-05-18T20:41:32.815Z"
+    },
+    {
+      "id": "30",
+      "title": "Review zabalsocials.vercel.app and synthesise into bettercallzaal journal",
+      "createdBy": "IMan",
+      "owner": "Iman",
+      "status": "TODO",
+      "category": "Other",
+      "priority": "P2",
+      "important": false,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "",
+      "notes": "",
+      "createdAt": "2026-05-18T20:42:28.666Z",
+      "updatedAt": "2026-05-18T20:42:28.666Z"
     }
   ],
   "recurringDefs": []
