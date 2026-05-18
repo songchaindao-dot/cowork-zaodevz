@@ -1,6 +1,6 @@
 {
   "name": "zaocoworking-agent",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "private": true,
   "type": "module",
   "description": "ZAOcoworkingBot - Telegram concierge for cowork-zaodevz. Hermes pattern (claude CLI subprocess) + Letta-style 5-block memory + Octokit actions.json read/write.",

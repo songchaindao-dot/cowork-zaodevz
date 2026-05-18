@@ -93,6 +93,11 @@ export async function cmdStart(ctx: Context): Promise<void> {
       '  /done <id> - mark done\n' +
       '  /assign <id> <Owner> - reassign\n' +
       '  /daily - admin: post digest of open items\n\n' +
+      'team (admin):\n' +
+      '  /team - show roster\n' +
+      '  /adduser <tg_id> <Name> [admin] - add member, no restart\n' +
+      '  /addchat - allow CURRENT group chat\n' +
+      '  /reload - force-refresh roster from github\n\n' +
       'model / keys:\n' +
       '  /providers - list available LLM providers\n' +
       '  /mymodel - show my current provider/model\n' +
