@@ -1,27 +1,28 @@
 // ZAOcoworkingBot -> ZABAL Bonfire integration (Phase 1 per Doc 669).
 //
+// v0.3.1: switched from the guessed kEngram/batch endpoint (which 404'd) to
+// the real /knowledge_graph/episode/create endpoint discovered via OpenAPI
+// at https://tnt-v2.api.bonfires.ai/openapi.json. Bonfires takes natural-
+// language episode bodies; their 20-min auto-extraction builds the KG for
+// us (per Doc 673b). We stop crafting structured nodes+edges manually.
+//
 // Each action-tracker mutation calls bonfireHook(event). The hook:
-//   1. converts the TeamEvent to a kEngram changeset (nodes + edges)
+//   1. converts the TeamEvent to a natural-language episode body
 //   2. enqueues to a local jsonl spool (~/.zaocoworking/bonfire-spool.jsonl)
-//   3. attempts an HTTP POST to the Bonfires API
+//   3. attempts an HTTP POST /knowledge_graph/episode/create
 //   4. on success, marks the spool line sent
 //   5. on failure, leaves the line pending for retry on next drain
 //
-// Hook is a no-op if env vars are not configured. Code is safe to ship
-// before credentials land - the moment BONFIRE_API_KEY + BONFIRE_ID are
-// set + the bot restarts, the integration goes live.
-//
-// HTTP path (not subprocess) because the VPS has python3 but no pip; the
-// Bonfires SDK is Python. Native Node HTTP is cleaner for our stack.
+// Hook is a no-op if env vars are not configured.
 //
 // Env contract:
 //   BONFIRE_API_KEY    - revealed via signed message at app.bonfires.ai/dashboard
-//   BONFIRE_ID         - UUID of the ZABAL bonfire
+//   BONFIRE_ID         - the ZABAL bonfire id (24-hex)
 //   BONFIRE_API_URL    - defaults to https://tnt-v2.api.bonfires.ai
 //   BONFIRE_ENABLED    - any truthy value enables; missing or "false" = skip
 //   BONFIRE_DEFAULT_BRAND - tag for events whose brand isn't explicit (default "ZAO")
 
-import type { BonfireChangeset, BonfireEdge, BonfireNode, TeamEvent } from './types';
+import type { TeamEvent } from './types';
 import { enqueue, readPending, rewrite } from './spool';
 
 const API_KEY = process.env.BONFIRE_API_KEY ?? '';
@@ -29,7 +30,7 @@ const BONFIRE_ID = process.env.BONFIRE_ID ?? '';
 const API_URL = process.env.BONFIRE_API_URL ?? 'https://tnt-v2.api.bonfires.ai';
 const ENABLED = !!process.env.BONFIRE_ENABLED && process.env.BONFIRE_ENABLED !== 'false' && !!API_KEY && !!BONFIRE_ID;
 const DEFAULT_BRAND = process.env.BONFIRE_DEFAULT_BRAND ?? 'ZAO';
-const FETCH_TIMEOUT_MS = 8_000;
+const FETCH_TIMEOUT_MS = 15_000;
 
 export function isBonfireEnabled(): boolean {
   return ENABLED;
@@ -45,143 +46,133 @@ export function bonfireStatusLine(): string {
 }
 
 /**
- * Convert a TeamEvent to the kEngram changeset shape per Doc 668d spec.
- * Each op produces 1-2 nodes + a small set of edges. Auto-UUIDs.
+ * Real Bonfires API request shape from /openapi.json CreateEpisodeDirectRequest.
  */
-export function eventToChangeset(event: TeamEvent): BonfireChangeset {
+interface EpisodeRequest {
+  bonfire_id: string;
+  name: string;
+  episode_body: string;
+  source: 'text' | 'json' | 'message';
+  source_description: string;
+  reference_time?: string; // ISO datetime
+  group_id?: string;
+  uuid?: string;
+  entity_types?: string[];
+}
+
+interface EpisodeResponse {
+  success: boolean;
+  task_id?: string;
+  status?: string; // typically "queued"
+  message?: string | null;
+}
+
+/**
+ * Convert a TeamEvent to an episode request. Each event becomes one natural-
+ * language paragraph; Bonfires runs its own entity + relationship extraction
+ * on the text. The `name` field doubles as a stable searchable key; the
+ * `source_description` carries machine-readable provenance.
+ *
+ * Brand is included in the body text so the auto-extracted KG groups items
+ * under each brand entity (The ZAO, WaveWarZ, COC Concertz, ZABAL, etc).
+ */
+export function eventToEpisode(event: TeamEvent): EpisodeRequest {
   const brand = event.brand ?? DEFAULT_BRAND;
   const id = event.item.id;
   const ts = event.timestamp;
   const actor = event.actor;
-  const nodes: BonfireNode[] = [];
-  const edges: BonfireEdge[] = [];
+  const item = event.item;
 
+  // Stable episode name: opType + item id + epoch ms slice (allows multiple
+  // events on the same item across time)
+  const epochMs = String(Date.parse(ts) || Date.now());
+  const name = `${event.op}:todo:${id}:${epochMs}`;
+
+  let body: string;
   switch (event.op) {
     case 'add':
-      nodes.push({
-        uuid: 'auto',
-        name: `todo:${id}`,
-        summary: event.item.title,
-        labels: ['Todo', 'Open', brand, event.item.category, event.item.priority].filter(Boolean) as string[],
-      });
-      edges.push({ source: `todo:${id}`, target: actor, name: 'CREATED_BY', fact: ts });
-      edges.push({ source: `todo:${id}`, target: brand, name: 'BELONGS_TO' });
-      if (event.item.owner && event.item.owner !== 'Open') {
-        edges.push({ source: `todo:${id}`, target: event.item.owner, name: 'ASSIGNED_TO' });
-      }
+      body =
+        `${actor} created todo #${id} "${item.title}" in the ${brand} action tracker at ${ts}. ` +
+        `Owner: ${item.owner}. Category: ${item.category || 'uncategorized'}. Priority: ${item.priority}.` +
+        (item.notes ? ` Notes: ${item.notes}` : '') +
+        (item.due ? ` Due: ${item.due}.` : '');
       break;
-
     case 'wip':
-      nodes.push({
-        uuid: 'auto',
-        name: `todo:${id}:wip:${ts}`,
-        summary: `Marked in-progress at ${ts}`,
-        labels: ['TodoEvent', 'InProgress', brand],
-      });
-      edges.push({ source: `todo:${id}:wip:${ts}`, target: `todo:${id}`, name: 'UPDATES' });
-      edges.push({ source: `todo:${id}:wip:${ts}`, target: actor, name: 'DONE_BY', fact: ts });
+      body =
+        `${actor} moved todo #${id} "${item.title}" to in-progress in the ${brand} action tracker at ${ts}. ` +
+        `Owner: ${item.owner}. Priority: ${item.priority}.`;
       break;
-
     case 'blocked':
-      nodes.push({
-        uuid: 'auto',
-        name: `todo:${id}:blocked:${ts}`,
-        summary: `Marked BLOCKED at ${ts}${event.reason ? ': ' + event.reason : ''}`,
-        labels: ['TodoEvent', 'Blocked', brand],
-      });
-      edges.push({ source: `todo:${id}:blocked:${ts}`, target: `todo:${id}`, name: 'UPDATES' });
-      edges.push({ source: `todo:${id}:blocked:${ts}`, target: actor, name: 'DONE_BY', fact: ts });
+      body =
+        `${actor} marked todo #${id} "${item.title}" BLOCKED in the ${brand} action tracker at ${ts}. ` +
+        `Owner: ${item.owner}.` +
+        (event.reason ? ` Blocker: ${event.reason}.` : '');
       break;
-
     case 'done':
-      nodes.push({
-        uuid: 'auto',
-        name: `todo:${id}:done:${ts}`,
-        summary: `Completed at ${ts}${event.reason ? ': ' + event.reason : ''}`,
-        labels: ['TodoEvent', 'Done', brand],
-      });
-      edges.push({ source: `todo:${id}:done:${ts}`, target: `todo:${id}`, name: 'COMPLETES' });
-      edges.push({ source: `todo:${id}:done:${ts}`, target: actor, name: 'COMPLETED_BY', fact: ts });
+      body =
+        `${actor} completed todo #${id} "${item.title}" in the ${brand} action tracker at ${ts}. ` +
+        `Owner: ${item.owner}. Category: ${item.category || 'uncategorized'}. Priority: ${item.priority}.` +
+        (event.reason ? ` Completion note: ${event.reason}.` : '');
       break;
-
     case 'assign':
-      nodes.push({
-        uuid: 'auto',
-        name: `todo:${id}:assigned:${ts}`,
-        summary: `Assigned to ${event.item.owner} at ${ts}`,
-        labels: ['TodoEvent', 'Assignment', brand],
-      });
-      edges.push({ source: `todo:${id}:assigned:${ts}`, target: `todo:${id}`, name: 'UPDATES' });
-      edges.push({ source: `todo:${id}:assigned:${ts}`, target: event.item.owner, name: 'ASSIGNED_TO' });
-      if (event.previousOwner && event.previousOwner !== event.item.owner) {
-        edges.push({ source: `todo:${id}:assigned:${ts}`, target: event.previousOwner, name: 'REASSIGNED_FROM' });
-      }
-      edges.push({ source: `todo:${id}:assigned:${ts}`, target: actor, name: 'DONE_BY', fact: ts });
+      body =
+        `${actor} reassigned todo #${id} "${item.title}" from ${event.previousOwner ?? 'previous owner'} to ${item.owner} in the ${brand} action tracker at ${ts}.`;
       break;
-
     case 'setdue':
-      nodes.push({
-        uuid: 'auto',
-        name: `todo:${id}:due:${ts}`,
-        summary: `Due date set to ${event.item.due || '(cleared)'} at ${ts}`,
-        labels: ['TodoEvent', 'DueDateChange', brand],
-      });
-      edges.push({ source: `todo:${id}:due:${ts}`, target: `todo:${id}`, name: 'UPDATES' });
-      edges.push({ source: `todo:${id}:due:${ts}`, target: actor, name: 'DONE_BY', fact: ts });
+      body =
+        `${actor} set the due date on todo #${id} "${item.title}" to ${item.due || 'cleared'} in the ${brand} action tracker at ${ts}.` +
+        (event.previousDue ? ` Previous due: ${event.previousDue}.` : '');
       break;
-
     case 'setnote':
-      nodes.push({
-        uuid: 'auto',
-        name: `todo:${id}:note:${ts}`,
-        summary: `Notes updated at ${ts}`,
-        labels: ['TodoEvent', 'NotesChange', brand],
-      });
-      edges.push({ source: `todo:${id}:note:${ts}`, target: `todo:${id}`, name: 'UPDATES' });
-      edges.push({ source: `todo:${id}:note:${ts}`, target: actor, name: 'DONE_BY', fact: ts });
+      body =
+        `${actor} updated notes on todo #${id} "${item.title}" in the ${brand} action tracker at ${ts}. ` +
+        `New notes: ${item.notes || '(empty)'}.`;
       break;
-
     case 'setprio':
-      nodes.push({
-        uuid: 'auto',
-        name: `todo:${id}:prio:${ts}`,
-        summary: `Priority changed ${event.previousPriority ?? '?'} -> ${event.item.priority} at ${ts}`,
-        labels: ['TodoEvent', 'PriorityChange', brand, event.item.priority],
-      });
-      edges.push({ source: `todo:${id}:prio:${ts}`, target: `todo:${id}`, name: 'UPDATES' });
-      edges.push({ source: `todo:${id}:prio:${ts}`, target: actor, name: 'DONE_BY', fact: ts });
+      body =
+        `${actor} changed priority on todo #${id} "${item.title}" from ${event.previousPriority ?? '?'} to ${item.priority} in the ${brand} action tracker at ${ts}.`;
       break;
+    default:
+      body = `${actor} performed an unknown operation on todo #${id} "${item.title}" at ${ts}.`;
   }
 
-  return { nodes, edges };
+  return {
+    bonfire_id: BONFIRE_ID,
+    name,
+    episode_body: body,
+    source: 'text',
+    source_description: `zaocoworking-bot:${event.op}:${id}`,
+    reference_time: ts,
+  };
 }
 
 /**
- * Post a changeset to the Bonfires API. Returns true on 2xx, false otherwise.
- * Never throws - caller decides whether to keep the spool line pending.
- *
- * The exact endpoint path is per the Bonfires SDK convention:
- *   POST {API_URL}/v1/bonfires/{BONFIRE_ID}/kengram/batch
- * If that turns out wrong once we test against the real API, this is the
- * single function to update.
+ * Post an episode to the Bonfires API. Returns true on 2xx. Never throws.
+ * Real endpoint per OpenAPI spec: POST {API_URL}/knowledge_graph/episode/create
  */
-async function postToBonfire(changeset: BonfireChangeset): Promise<{ ok: boolean; status?: number; error?: string }> {
-  const url = `${API_URL.replace(/\/$/, '')}/v1/bonfires/${BONFIRE_ID}/kengram/batch`;
+async function postEpisode(req: EpisodeRequest): Promise<{ ok: boolean; status?: number; taskId?: string; error?: string }> {
+  const url = `${API_URL.replace(/\/$/, '')}/knowledge_graph/episode/create`;
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(changeset),
+      body: JSON.stringify(req),
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      return { ok: false, status: res.status, error: body.slice(0, 200) };
+      return { ok: false, status: res.status, error: body.slice(0, 300) };
     }
-    return { ok: true, status: res.status };
+    let parsed: EpisodeResponse | null = null;
+    try {
+      parsed = (await res.json()) as EpisodeResponse;
+    } catch {
+      // 2xx but unparseable body - still treat as success
+    }
+    return { ok: true, status: res.status, taskId: parsed?.task_id };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
@@ -190,9 +181,6 @@ async function postToBonfire(changeset: BonfireChangeset): Promise<{ ok: boolean
 /**
  * Main entry point. Called from commands.ts after each successful mutation.
  * Returns immediately if Bonfires is disabled; never throws.
- *
- * On a failed POST, the spool retains the event for retry. drain() can be
- * called periodically (or on next event) to replay pending events.
  */
 export async function bonfireHook(event: TeamEvent): Promise<void> {
   if (!ENABLED) return;
@@ -203,34 +191,37 @@ export async function bonfireHook(event: TeamEvent): Promise<void> {
     console.error('[bonfire] enqueue failed:', err);
     return;
   }
-  const changeset = eventToChangeset(event);
-  const result = await postToBonfire(changeset);
+  const req = eventToEpisode(event);
+  const result = await postEpisode(req);
   const now = new Date().toISOString();
-  const updates = new Map<string, ReturnType<typeof makeLine>>();
-  function makeLine(status: 'sent' | 'failed', attempts: number, lastError?: string) {
-    return {
+  const updates = new Map<string, unknown>();
+  if (result.ok) {
+    updates.set(spoolId, {
       id: spoolId,
       event,
-      status,
-      attempts,
-      lastError,
+      status: 'sent',
+      attempts: 1,
       enqueuedAt: now,
-      sentAt: status === 'sent' ? now : undefined,
-    } as const;
-  }
-  if (result.ok) {
-    updates.set(spoolId, makeLine('sent', 1));
-    console.log(`[bonfire] sent ${event.op} #${event.item.id} (${changeset.nodes.length} nodes, ${changeset.edges.length} edges)`);
+      sentAt: now,
+      taskId: result.taskId,
+    });
+    console.log(`[bonfire] sent ${event.op} #${event.item.id} -> task_id=${result.taskId ?? '?'}`);
   } else {
-    updates.set(spoolId, makeLine('failed', 1, `status=${result.status ?? '-'} ${result.error ?? ''}`.trim()));
-    console.error(`[bonfire] post failed for ${event.op} #${event.item.id}: ${result.error}`);
+    updates.set(spoolId, {
+      id: spoolId,
+      event,
+      status: 'failed',
+      attempts: 1,
+      lastError: `status=${result.status ?? '-'} ${result.error ?? ''}`.trim(),
+      enqueuedAt: now,
+    });
+    console.error(`[bonfire] post failed for ${event.op} #${event.item.id}: status=${result.status ?? '-'} ${result.error ?? ''}`);
   }
   await rewrite(updates as never).catch((e) => console.error('[bonfire] spool rewrite failed:', e));
 }
 
 /**
  * Drain pending spool lines. Called on bot startup + opportunistically.
- * Returns count {sent, failed, kept}.
  */
 export async function drainSpool(): Promise<{ sent: number; failed: number; kept: number }> {
   if (!ENABLED) return { sent: 0, failed: 0, kept: 0 };
@@ -240,8 +231,8 @@ export async function drainSpool(): Promise<{ sent: number; failed: number; kept
   let sent = 0;
   let failed = 0;
   for (const line of pending) {
-    const changeset = eventToChangeset(line.event);
-    const result = await postToBonfire(changeset);
+    const req = eventToEpisode(line.event);
+    const result = await postEpisode(req);
     if (result.ok) {
       sent++;
       updates.set(line.id, {
