@@ -87,3 +87,31 @@ export async function cmdReload(ctx: Context): Promise<void> {
     await ctx.reply(`reload failed: ${(err as Error).message.slice(0, 200)}`);
   }
 }
+
+/**
+ * v2.7 self-onboarding. /whoami works for ANYONE (not allowlist-gated). New
+ * users DM the bot, get their telegram id + exact /adduser command to forward
+ * to an admin. Admins can also DM /whoami to grab their own id.
+ */
+export async function cmdWhoami(ctx: Context): Promise<void> {
+  const id = ctx.from?.id;
+  if (!id) {
+    await ctx.reply('cannot read your id from this context');
+    return;
+  }
+  const view = await rosterView();
+  const isMember = view.allowedUserIds.has(id);
+  const name = ctx.from?.first_name ?? ctx.from?.username ?? 'there';
+  if (isMember) {
+    const owner = view.ownerByTgId.get(id) ?? '?';
+    const admin = view.adminUserIds.has(id) ? ' (admin)' : '';
+    await ctx.reply(`hi ${name}\nyour telegram id: ${id}\non roster as: ${owner}${admin}`);
+  } else {
+    await ctx.reply(
+      `hi ${name}\nyour telegram id: ${id}\n\n` +
+        `you're NOT on the cowork roster yet. ask Zaal or Iman to DM me:\n` +
+        `/adduser ${id} ${name}\n\n` +
+        `takes a few seconds, no restart.`,
+    );
+  }
+}
