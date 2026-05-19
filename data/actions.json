@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-19T20:26:56.215Z",
+  "updatedAt": "2026-05-19T20:27:07.718Z",
   "items": [
     {
       "id": "1",
@@ -945,7 +945,7 @@
       "title": "Push SongChainn Phase 2 - register songs as smart contracts, tradable like Tortoise",
       "createdBy": "Claude (May 18 chat extraction)",
       "owner": "Iman",
-      "status": "TODO",
+      "status": "BLOCKED",
       "category": "Site / Tech",
       "priority": "P2",
       "important": false,
@@ -956,7 +956,17 @@
       "due": "",
       "notes": "",
       "createdAt": "2026-05-18T21:30:00.000Z",
-      "updatedAt": "2026-05-18T21:30:00.000Z"
+      "updatedAt": "2026-05-19T20:27:07.718Z",
+      "activity": [
+        {
+          "id": "a-1779222427718-a0vu",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "status_changed",
+          "detail": "TODO → BLOCKED",
+          "createdAt": "2026-05-19T20:27:07.718Z"
+        }
+      ]
     },
     {
       "id": "41",
