@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-19T20:26:23.721Z",
+  "updatedAt": "2026-05-19T20:26:56.215Z",
   "items": [
     {
       "id": "1",
@@ -899,18 +899,28 @@
       "title": "Fix SongChainn UI: bolder sign-up/login buttons, consolidate to one button with login fields on home",
       "createdBy": "Claude (May 18 chat extraction)",
       "owner": "Iman",
-      "status": "TODO",
+      "status": "DONE",
       "category": "Site / Tech",
       "priority": "P2",
       "important": false,
       "urgent": false,
-      "completedAt": "",
-      "completedBy": "",
+      "completedAt": "2026-05-19T20:26:56.215Z",
+      "completedBy": "iman",
       "phase": "Define",
       "due": "",
       "notes": "",
       "createdAt": "2026-05-18T21:30:00.000Z",
-      "updatedAt": "2026-05-18T21:30:00.000Z"
+      "updatedAt": "2026-05-19T20:26:56.215Z",
+      "activity": [
+        {
+          "id": "a-1779222416215-5mh2",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "status_changed",
+          "detail": "TODO → DONE",
+          "createdAt": "2026-05-19T20:26:56.215Z"
+        }
+      ]
     },
     {
       "id": "39",
