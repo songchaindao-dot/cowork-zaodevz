@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-19T20:19:50.840Z",
+  "updatedAt": "2026-05-19T20:21:40.074Z",
   "items": [
     {
       "id": "1",
@@ -2098,15 +2098,17 @@
       "status": "TODO",
       "category": "Ops",
       "priority": "P1",
-      "important": false,
-      "urgent": false,
+      "important": true,
+      "urgent": true,
       "completedAt": "",
       "completedBy": "",
       "phase": "Define",
       "due": "2026-05-20",
       "notes": "",
       "createdAt": "2026-05-19T20:19:50.840Z",
-      "updatedAt": "2026-05-19T20:19:50.840Z",
+      "updatedAt": "2026-05-19T20:21:40.073Z",
+      "taskType": "task",
+      "requiresApproval": false,
       "claimable": false,
       "activity": [
         {
