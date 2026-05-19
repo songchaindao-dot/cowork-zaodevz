@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-19T17:32:24.685Z",
+  "updatedAt": "2026-05-19T20:19:50.840Z",
   "items": [
     {
       "id": "1",
@@ -2087,6 +2087,34 @@
           "displayName": "Iman",
           "action": "created",
           "createdAt": "2026-05-19T17:32:24.685Z"
+        }
+      ]
+    },
+    {
+      "id": "106",
+      "title": "355$ deposit for PIZZA DAO Sponsorship and front",
+      "createdBy": "iman",
+      "owner": "Both",
+      "status": "TODO",
+      "category": "Ops",
+      "priority": "P1",
+      "important": false,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "2026-05-20",
+      "notes": "",
+      "createdAt": "2026-05-19T20:19:50.840Z",
+      "updatedAt": "2026-05-19T20:19:50.840Z",
+      "claimable": false,
+      "activity": [
+        {
+          "id": "a-1779221990840-lq1j",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "created",
+          "createdAt": "2026-05-19T20:19:50.840Z"
         }
       ]
     }
