@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-19T20:24:42.629Z",
+  "updatedAt": "2026-05-19T20:25:13.185Z",
   "items": [
     {
       "id": "1",
@@ -633,7 +633,7 @@
       "title": "Fix SongChainn WaveWarz Africa battle zone end-to-end (hosting, rooms, live music player, real-time trades)",
       "createdBy": "IMan",
       "owner": "Iman",
-      "status": "TODO",
+      "status": "BLOCKED",
       "category": "Other",
       "priority": "P2",
       "important": false,
@@ -644,7 +644,17 @@
       "due": "",
       "notes": "",
       "createdAt": "2026-05-18T19:41:36.910Z",
-      "updatedAt": "2026-05-18T19:41:36.910Z"
+      "updatedAt": "2026-05-19T20:25:13.184Z",
+      "activity": [
+        {
+          "id": "a-1779222313185-eiss",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "status_changed",
+          "detail": "TODO → BLOCKED",
+          "createdAt": "2026-05-19T20:25:13.184Z"
+        }
+      ]
     },
     {
       "id": "27",
