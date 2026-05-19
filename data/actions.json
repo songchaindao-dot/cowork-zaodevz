@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-19T09:42:19.573Z",
+  "updatedAt": "2026-05-19T09:46:37.211Z",
   "items": [
     {
       "id": "1",
@@ -641,7 +641,7 @@
       "title": "Make and ship ZAO flyer for PizzaDAO Zambia",
       "createdBy": "IMan",
       "owner": "Iman",
-      "status": "TODO",
+      "status": "WIP",
       "category": "Other",
       "priority": "P2",
       "important": false,
@@ -652,7 +652,17 @@
       "due": "",
       "notes": "",
       "createdAt": "2026-05-18T20:13:02.124Z",
-      "updatedAt": "2026-05-18T20:13:02.124Z"
+      "updatedAt": "2026-05-19T09:46:37.210Z",
+      "activity": [
+        {
+          "id": "a-1779183997211-rxbf",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "status_changed",
+          "detail": "TODO → WIP",
+          "createdAt": "2026-05-19T09:46:37.210Z"
+        }
+      ]
     },
     {
       "id": "28",
