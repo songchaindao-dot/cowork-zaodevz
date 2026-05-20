@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-20T08:40:06.298Z",
+  "updatedAt": "2026-05-20T08:41:49.700Z",
   "items": [
     {
       "id": "1",
@@ -1148,7 +1148,17 @@
       "due": "2026-05-18",
       "notes": "",
       "createdAt": "2026-05-18T21:30:00.000Z",
-      "updatedAt": "2026-05-18T21:30:00.000Z"
+      "updatedAt": "2026-05-20T08:41:49.700Z",
+      "timerStartedAt": "2026-05-20T08:41:49.700Z",
+      "activity": [
+        {
+          "id": "a-1779266509700-nibk",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "timer_started",
+          "createdAt": "2026-05-20T08:41:49.700Z"
+        }
+      ]
     },
     {
       "id": "50",
