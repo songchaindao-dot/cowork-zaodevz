@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-20T08:42:03.637Z",
+  "updatedAt": "2026-05-20T08:42:33.286Z",
   "items": [
     {
       "id": "1",
@@ -1137,7 +1137,7 @@
       "title": "Walk BetterCallZaal.com 10-section verification checklist + DM Zaal which items fail",
       "createdBy": "Claude (May 18 chat extraction)",
       "owner": "Iman",
-      "status": "TODO",
+      "status": "WIP",
       "category": "Site / Tech",
       "priority": "P1",
       "important": false,
@@ -1148,7 +1148,7 @@
       "due": "2026-05-18",
       "notes": "",
       "createdAt": "2026-05-18T21:30:00.000Z",
-      "updatedAt": "2026-05-20T08:42:03.637Z",
+      "updatedAt": "2026-05-20T08:42:33.286Z",
       "activity": [
         {
           "id": "a-1779266509700-nibk",
@@ -1164,6 +1164,14 @@
           "action": "timer_stopped",
           "detail": "+13s (total 13s)",
           "createdAt": "2026-05-20T08:42:03.637Z"
+        },
+        {
+          "id": "a-1779266553286-qaf7",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "status_changed",
+          "detail": "TODO → WIP",
+          "createdAt": "2026-05-20T08:42:33.286Z"
         }
       ],
       "timeTracked": 13
