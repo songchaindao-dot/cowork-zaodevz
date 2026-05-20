@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-20T08:41:49.700Z",
+  "updatedAt": "2026-05-20T08:42:03.637Z",
   "items": [
     {
       "id": "1",
@@ -1148,8 +1148,7 @@
       "due": "2026-05-18",
       "notes": "",
       "createdAt": "2026-05-18T21:30:00.000Z",
-      "updatedAt": "2026-05-20T08:41:49.700Z",
-      "timerStartedAt": "2026-05-20T08:41:49.700Z",
+      "updatedAt": "2026-05-20T08:42:03.637Z",
       "activity": [
         {
           "id": "a-1779266509700-nibk",
@@ -1157,8 +1156,17 @@
           "displayName": "Iman",
           "action": "timer_started",
           "createdAt": "2026-05-20T08:41:49.700Z"
+        },
+        {
+          "id": "a-1779266523637-g004",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "timer_stopped",
+          "detail": "+13s (total 13s)",
+          "createdAt": "2026-05-20T08:42:03.637Z"
         }
-      ]
+      ],
+      "timeTracked": 13
     },
     {
       "id": "50",
