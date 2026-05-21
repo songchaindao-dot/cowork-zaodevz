@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-21T00:08:02.391Z",
+  "updatedAt": "2026-05-21T00:08:30.023Z",
   "items": [
     {
       "id": "1",
@@ -114,18 +114,18 @@
       "title": "Set up imanagent on existing VPS",
       "createdBy": "zaal",
       "owner": "Zaal",
-      "status": "TODO",
+      "status": "DONE",
       "category": "Site / Tech",
       "priority": "P3",
       "important": false,
       "urgent": false,
-      "completedAt": "",
-      "completedBy": "",
+      "completedAt": "2026-05-21T00:08:30.023Z",
+      "completedBy": "zaal",
       "phase": "Define",
       "due": "2026-05-17",
       "notes": "See BACKLOG.md Phase 4. Hermes-style agent. Daily summary post + inbox watcher candidates.",
       "createdAt": "2026-05-06T00:00:00.000Z",
-      "updatedAt": "2026-05-21T00:08:02.391Z",
+      "updatedAt": "2026-05-21T00:08:30.023Z",
       "taskType": "task",
       "requiresApproval": false,
       "claimable": false,
@@ -174,6 +174,14 @@
           "action": "status_changed",
           "detail": "DONE → TODO",
           "createdAt": "2026-05-21T00:07:59.168Z"
+        },
+        {
+          "id": "a-1779322110023-pgfo",
+          "userId": "zaal",
+          "displayName": "Zaal",
+          "action": "status_changed",
+          "detail": "TODO → DONE",
+          "createdAt": "2026-05-21T00:08:30.023Z"
         }
       ]
     },
