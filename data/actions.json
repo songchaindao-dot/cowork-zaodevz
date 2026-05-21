@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-21T13:15:26.924Z",
+  "updatedAt": "2026-05-21T13:18:42.537Z",
   "items": [
     {
       "id": "1",
@@ -865,7 +865,7 @@
       "id": "32",
       "title": "Check out Nouns DAO page for governance context",
       "createdBy": "IMan",
-      "owner": "Iman",
+      "owner": "Both",
       "status": "TODO",
       "category": "Other",
       "priority": "P2",
@@ -875,9 +875,12 @@
       "completedBy": "",
       "phase": "Define",
       "due": "",
-      "notes": "",
+      "notes": "Let's have a chat about it",
       "createdAt": "2026-05-18T20:42:59.582Z",
-      "updatedAt": "2026-05-18T20:42:59.582Z"
+      "updatedAt": "2026-05-21T13:18:42.536Z",
+      "taskType": "task",
+      "requiresApproval": false,
+      "claimable": false
     },
     {
       "id": "33",
