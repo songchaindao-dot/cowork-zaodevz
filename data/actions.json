@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-21T12:04:16.462Z",
+  "updatedAt": "2026-05-21T12:07:48.714Z",
   "items": [
     {
       "id": "1",
@@ -2747,9 +2747,6 @@
       "createdAt": "2026-05-21T12:04:16.462Z",
       "updatedAt": "2026-05-21T12:04:16.462Z",
       "claimable": false,
-      "assignees": [
-        "ThyRev"
-      ],
       "activity": [
         {
           "id": "a-1779365056462-65za",
@@ -2757,6 +2754,37 @@
           "displayName": "Zaal",
           "action": "created",
           "createdAt": "2026-05-21T12:04:16.462Z"
+        }
+      ],
+      "assignees": [
+        "ThyRev"
+      ]
+    },
+    {
+      "id": "129",
+      "title": "Artwork for promo",
+      "createdBy": "thyrev",
+      "owner": "Iman",
+      "status": "TODO",
+      "category": "ZAO Devz",
+      "priority": "P2",
+      "important": true,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "",
+      "notes": "",
+      "createdAt": "2026-05-21T12:07:48.714Z",
+      "updatedAt": "2026-05-21T12:07:48.714Z",
+      "claimable": false,
+      "activity": [
+        {
+          "id": "a-1779365268714-jsvu",
+          "userId": "thyrev",
+          "displayName": "Thyrev",
+          "action": "created",
+          "createdAt": "2026-05-21T12:07:48.714Z"
         }
       ]
     }
