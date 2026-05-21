@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-20T16:20:07.450Z",
+  "updatedAt": "2026-05-21T00:07:45.241Z",
   "items": [
     {
       "id": "1",
@@ -125,10 +125,29 @@
       "due": "2026-05-17",
       "notes": "See BACKLOG.md Phase 4. Hermes-style agent. Daily summary post + inbox watcher candidates.",
       "createdAt": "2026-05-06T00:00:00.000Z",
-      "updatedAt": "2026-05-17T15:47:45.680Z",
+      "updatedAt": "2026-05-21T00:07:45.241Z",
       "taskType": "task",
       "requiresApproval": false,
-      "claimable": false
+      "claimable": false,
+      "comments": [
+        {
+          "id": "c-1779322065241-utt0",
+          "userId": "zaal",
+          "displayName": "Zaal",
+          "content": "finished this on info@thezao.com iman now has acess to the VPS cobuild bot!",
+          "createdAt": "2026-05-21T00:07:45.241Z"
+        }
+      ],
+      "activity": [
+        {
+          "id": "a-1779322065241-qxk2",
+          "userId": "zaal",
+          "displayName": "Zaal",
+          "action": "commented",
+          "detail": "finished this on info@thezao.com iman now has acess to the V",
+          "createdAt": "2026-05-21T00:07:45.241Z"
+        }
+      ]
     },
     {
       "id": "8",
