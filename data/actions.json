@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-21T12:09:34.986Z",
+  "updatedAt": "2026-05-21T12:09:52.174Z",
   "items": [
     {
       "id": "1",
@@ -2747,6 +2747,18 @@
       "createdAt": "2026-05-21T12:04:16.462Z",
       "updatedAt": "2026-05-21T12:09:34.986Z",
       "claimable": false,
+      "updates": [
+        {
+          "id": "u-1779365374986-0uva",
+          "submittedBy": "zaal",
+          "displayName": "Zaal",
+          "content": "https://luma.com/njzxpsgn luma is live",
+          "fromStatus": "TODO",
+          "toStatus": "WIP",
+          "reviewStatus": "approved",
+          "createdAt": "2026-05-21T12:09:34.986Z"
+        }
+      ],
       "activity": [
         {
           "id": "a-1779365056462-65za",
@@ -2766,18 +2778,6 @@
       ],
       "assignees": [
         "ThyRev"
-      ],
-      "updates": [
-        {
-          "id": "u-1779365374986-0uva",
-          "submittedBy": "zaal",
-          "displayName": "Zaal",
-          "content": "https://luma.com/njzxpsgn luma is live",
-          "fromStatus": "TODO",
-          "toStatus": "WIP",
-          "reviewStatus": "approved",
-          "createdAt": "2026-05-21T12:09:34.986Z"
-        }
       ]
     },
     {
@@ -2805,6 +2805,37 @@
           "displayName": "Thyrev",
           "action": "created",
           "createdAt": "2026-05-21T12:07:48.714Z"
+        }
+      ]
+    },
+    {
+      "id": "130",
+      "title": "Coc concertz luma description update",
+      "createdBy": "zaal",
+      "owner": "ThyRev",
+      "status": "TODO",
+      "category": "ZAO Devz",
+      "priority": "P2",
+      "important": false,
+      "urgent": false,
+      "completedAt": "",
+      "completedBy": "",
+      "phase": "Define",
+      "due": "",
+      "notes": "",
+      "createdAt": "2026-05-21T12:09:52.174Z",
+      "updatedAt": "2026-05-21T12:09:52.174Z",
+      "claimable": false,
+      "assignees": [
+        "Iman"
+      ],
+      "activity": [
+        {
+          "id": "a-1779365392174-lauc",
+          "userId": "zaal",
+          "displayName": "Zaal",
+          "action": "created",
+          "createdAt": "2026-05-21T12:09:52.174Z"
         }
       ]
     }
