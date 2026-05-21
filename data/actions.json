@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-21T13:15:14.886Z",
+  "updatedAt": "2026-05-21T13:15:26.924Z",
   "items": [
     {
       "id": "1",
@@ -1269,7 +1269,10 @@
       "due": "",
       "notes": "",
       "createdAt": "2026-05-18T21:30:00.000Z",
-      "updatedAt": "2026-05-21T13:15:14.885Z",
+      "updatedAt": "2026-05-21T13:15:26.924Z",
+      "taskType": "task",
+      "requiresApproval": false,
+      "claimable": false,
       "activity": [
         {
           "id": "a-1779369314885-g7zk",
