@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-21T00:08:43.827Z",
+  "updatedAt": "2026-05-21T00:09:28.391Z",
   "items": [
     {
       "id": "1",
@@ -208,7 +208,7 @@
       "title": "Port tracker into ZAO OS as native module",
       "createdBy": "",
       "owner": "Zaal",
-      "status": "TODO",
+      "status": "WIP",
       "category": "Site / Tech",
       "priority": "P3",
       "important": false,
@@ -219,7 +219,29 @@
       "due": "After app stable",
       "notes": "Final form. See BACKLOG.md Phase 10.",
       "createdAt": "2026-05-06T00:00:00.000Z",
-      "updatedAt": "2026-05-06T00:00:00.000Z"
+      "updatedAt": "2026-05-21T00:09:28.391Z",
+      "updates": [
+        {
+          "id": "u-1779322168391-v55e",
+          "submittedBy": "zaal",
+          "displayName": "Zaal",
+          "content": "working on this rn with a move from this and zaostock todos to be together.",
+          "fromStatus": "TODO",
+          "toStatus": "WIP",
+          "reviewStatus": "approved",
+          "createdAt": "2026-05-21T00:09:28.391Z"
+        }
+      ],
+      "activity": [
+        {
+          "id": "a-1779322168391-zw32",
+          "userId": "zaal",
+          "displayName": "Zaal",
+          "action": "update_submitted",
+          "detail": "submitted update → WIP",
+          "createdAt": "2026-05-21T00:09:28.391Z"
+        }
+      ]
     },
     {
       "id": "10",
@@ -2279,6 +2301,18 @@
       "taskType": "task",
       "requiresApproval": false,
       "claimable": false,
+      "updates": [
+        {
+          "id": "u-1779322123827-1ejx",
+          "submittedBy": "zaal",
+          "displayName": "Zaal",
+          "content": "sent today",
+          "fromStatus": "TODO",
+          "toStatus": "DONE",
+          "reviewStatus": "approved",
+          "createdAt": "2026-05-21T00:08:43.827Z"
+        }
+      ],
       "activity": [
         {
           "id": "a-1779221990840-lq1j",
@@ -2293,18 +2327,6 @@
           "displayName": "Zaal",
           "action": "update_submitted",
           "detail": "submitted update → DONE",
-          "createdAt": "2026-05-21T00:08:43.827Z"
-        }
-      ],
-      "updates": [
-        {
-          "id": "u-1779322123827-1ejx",
-          "submittedBy": "zaal",
-          "displayName": "Zaal",
-          "content": "sent today",
-          "fromStatus": "TODO",
-          "toStatus": "DONE",
-          "reviewStatus": "approved",
           "createdAt": "2026-05-21T00:08:43.827Z"
         }
       ]
