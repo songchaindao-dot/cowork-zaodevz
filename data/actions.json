@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-21T13:14:18.750Z",
+  "updatedAt": "2026-05-21T13:15:14.886Z",
   "items": [
     {
       "id": "1",
@@ -1258,7 +1258,7 @@
       "title": "Move all future deployments to info@thezao.com Vercel account (stop using personal accounts)",
       "createdBy": "Claude (May 18 chat extraction)",
       "owner": "Iman",
-      "status": "TODO",
+      "status": "WIP",
       "category": "Ops",
       "priority": "P1",
       "important": false,
@@ -1269,7 +1269,17 @@
       "due": "",
       "notes": "",
       "createdAt": "2026-05-18T21:30:00.000Z",
-      "updatedAt": "2026-05-18T21:30:00.000Z"
+      "updatedAt": "2026-05-21T13:15:14.885Z",
+      "activity": [
+        {
+          "id": "a-1779369314885-g7zk",
+          "userId": "iman",
+          "displayName": "Iman",
+          "action": "status_changed",
+          "detail": "TODO → WIP",
+          "createdAt": "2026-05-21T13:15:14.885Z"
+        }
+      ]
     },
     {
       "id": "51",
