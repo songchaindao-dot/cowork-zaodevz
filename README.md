@@ -1,3 +1,9 @@
+> **DEPRECATED - NO LONGER ACTIVE**
+>
+> This repository has moved to **ZAO DEVZ**. Active development continues there.
+> The code here is kept for reference only and is no longer maintained. Do not
+> deploy, open PRs, or file issues against this repo.
+
 # imanprojects
 
 Iman x Zaal action tracker. Kanban + Six Sigma-flavored. Next.js 15 + React 19, password login, edit-in-browser, persistent state via GitHub Contents API.
