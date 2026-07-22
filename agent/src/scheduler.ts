@@ -120,6 +120,10 @@ async function runStaleAlert(bot: Bot): Promise<void> {
   const { data } = await fetchActions();
   const view = await rosterView();
   const now = Date.now();
+  // Group stale items by owner so each person gets ONE digest, not one DM per
+  // item. 25 stale items previously meant 25 separate pings in a row (audit
+  // noise); this collapses them into a single "N stale" message per owner.
+  const byTgId = new Map<number, { id: string; title: string; ageDays: number }[]>();
   for (const item of data.items) {
     if (item.status !== 'TODO') continue;
     const created = new Date(item.createdAt).getTime();
@@ -133,10 +137,23 @@ async function runStaleAlert(bot: Bot): Promise<void> {
       if (ownerValue === item.owner) { tgId = id; break; }
     }
     if (!tgId) continue;
-    await sendDM(bot.api, tgId, 'stale_alert',
-      `stale: #${item.id} has been TODO for ${Math.floor(ageDays)} days\n${item.title}\n\n/wip ${item.id} if moving / /done ${item.id} if shipped / /blocked ${item.id} <reason> if stuck / /notify off stale_alert to mute`,
-    );
+    const bucket = byTgId.get(tgId) ?? [];
+    bucket.push({ id: item.id, title: item.title, ageDays });
+    byTgId.set(tgId, bucket);
     pings[item.id] = new Date().toISOString();
+  }
+  // One digest DM per owner: all their stale items in a single message.
+  for (const [tgId, staleItems] of byTgId.entries()) {
+    staleItems.sort((a, b) => b.ageDays - a.ageDays);
+    const shown = staleItems.slice(0, 20);
+    const lines = [
+      `stale check - ${staleItems.length} task${staleItems.length === 1 ? '' : 's'} sitting in TODO 14+ days:`,
+      '',
+      ...shown.map((it) => `  #${it.id} (${Math.floor(it.ageDays)}d) ${it.title.slice(0, 60)}`),
+    ];
+    if (staleItems.length > shown.length) lines.push(`  ...and ${staleItems.length - shown.length} more`);
+    lines.push('', '/wip <id> if moving  /  /done <id> if shipped  /  /blocked <id> <reason> if stuck  /  /notify off stale_alert to mute');
+    await sendDM(bot.api, tgId, 'stale_alert', lines.join('\n'));
   }
   await fs.writeFile(stalePath, JSON.stringify(pings, null, 2), 'utf8');
   await markFired('stale-alert');
